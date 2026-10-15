@@ -148,5 +148,18 @@
       "stages": 111,
       "producer_counters": 2772
     }
+  },
+  {
+    "test": "full_native_prefill",
+    "prompt_length": 8192,
+    "token": 714,
+    "reference_token": 714,
+    "cosine": 0.9999971389770508,
+    "wall_ms": 20019.599988125265,
+    "counters": {
+      "generation": 8192,
+      "stages": 111,
+      "producer_counters": 2772
+    }
   }
 ]

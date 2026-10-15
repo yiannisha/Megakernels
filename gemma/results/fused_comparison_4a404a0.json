@@ -1,0 +1,136 @@
+{
+  "checks": [
+    {
+      "position": 128,
+      "baseline_token": 14908,
+      "optimized_token": 14908,
+      "reference_token": 14908,
+      "cosine": 0.9999970197677612
+    },
+    {
+      "position": 511,
+      "baseline_token": 8469,
+      "optimized_token": 8469,
+      "reference_token": 8469,
+      "cosine": 0.999997079372406
+    },
+    {
+      "position": 1023,
+      "baseline_token": 573,
+      "optimized_token": 573,
+      "reference_token": 573,
+      "cosine": 0.9999971389770508
+    }
+  ],
+  "runs": [
+    {
+      "iteration": 0,
+      "warmup": true,
+      "version": "baseline",
+      "wall_ms": 266.67430996894836,
+      "ms_per_token": 2.099797716290932
+    },
+    {
+      "iteration": 0,
+      "warmup": true,
+      "version": "optimized",
+      "wall_ms": 233.18272200413048,
+      "ms_per_token": 1.836084425229374
+    },
+    {
+      "iteration": 1,
+      "warmup": true,
+      "version": "baseline",
+      "wall_ms": 266.67082495987415,
+      "ms_per_token": 2.0997702752745995
+    },
+    {
+      "iteration": 1,
+      "warmup": true,
+      "version": "optimized",
+      "wall_ms": 233.25454094447196,
+      "ms_per_token": 1.8366499286966296
+    },
+    {
+      "iteration": 2,
+      "warmup": false,
+      "version": "baseline",
+      "wall_ms": 266.575664980337,
+      "ms_per_token": 2.099020984097142
+    },
+    {
+      "iteration": 2,
+      "warmup": false,
+      "version": "optimized",
+      "wall_ms": 233.21855580434203,
+      "ms_per_token": 1.8363665811365515
+    },
+    {
+      "iteration": 3,
+      "warmup": false,
+      "version": "baseline",
+      "wall_ms": 266.6676000226289,
+      "ms_per_token": 2.0997448820679443
+    },
+    {
+      "iteration": 3,
+      "warmup": false,
+      "version": "optimized",
+      "wall_ms": 233.24706684798002,
+      "ms_per_token": 1.8365910775431498
+    },
+    {
+      "iteration": 4,
+      "warmup": false,
+      "version": "baseline",
+      "wall_ms": 266.59828913398087,
+      "ms_per_token": 2.0991991270392196
+    },
+    {
+      "iteration": 4,
+      "warmup": false,
+      "version": "optimized",
+      "wall_ms": 233.1926990300417,
+      "ms_per_token": 1.8361629844885172
+    },
+    {
+      "iteration": 5,
+      "warmup": false,
+      "version": "baseline",
+      "wall_ms": 266.7187238112092,
+      "ms_per_token": 2.1001474315843245
+    },
+    {
+      "iteration": 5,
+      "warmup": false,
+      "version": "optimized",
+      "wall_ms": 233.20306302048266,
+      "ms_per_token": 1.8362445907124618
+    },
+    {
+      "iteration": 6,
+      "warmup": false,
+      "version": "baseline",
+      "wall_ms": 266.55392814427614,
+      "ms_per_token": 2.0988498279076864
+    },
+    {
+      "iteration": 6,
+      "warmup": false,
+      "version": "optimized",
+      "wall_ms": 233.1976001150906,
+      "ms_per_token": 1.8362015757093748
+    }
+  ],
+  "summary": {
+    "baseline": 2.0991991270392196,
+    "optimized": 1.8362445907124618,
+    "speedup": 1.1432023476919988,
+    "baseline_revision": "4a404a0",
+    "native_counters": {
+      "generation": 127,
+      "stages": 111,
+      "producer_counters": 1620
+    }
+  }
+}

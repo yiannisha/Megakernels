@@ -38,5 +38,17 @@
   [
     "native_acquire_release",
     "09e6c2e"
+  ],
+  [
+    "fused_native_graph",
+    "d7f35f6"
+  ],
+  [
+    "tensor_core_attention",
+    "672f98a"
+  ],
+  [
+    "native_prefill_and_8k_context",
+    "54030f2"
   ]
 ]

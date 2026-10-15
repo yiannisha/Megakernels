@@ -1,14 +1,16 @@
 {
-  "backend": "upstream-vm-tma",
+  "backend": "fused-megakernel-native",
   "counter_verification": {
     "generation": 127,
-    "stages": 220,
-    "producer_tiles": 44514
+    "stages": 111,
+    "producer_counters": 1044
   },
   "source_hashes": {
-    "native.cu": "e26b5e0f9d65d57037bc17be22d0a97553dc10b421b6289a4784917114d9ac85",
-    "ops.cuh": "1c883823edc26805e5365c68e9ac9c61cf4b2bf8b364d78096d178908b71f8fc",
-    "model.py": "517e5925c51f4d51a4cc0f068a69c0552495e5c244d00fca418ec7b5ab3cac65",
+    "native.cu": "07e129e49441a34e99bfd61112496db08741e6043e4bb95ed8eadb9f3a300a58",
+    "ops.cuh": "4b1abdbfc1580711e75eec2652083ad0f4ab210881429079fc9a2a74d5d0224c",
+    "fused.cuh": "2aa18467d8416d53d18ab36cee1190213f931e922670513d3e5ce39e3c8ba900",
+    "attention.cuh": "119c0aeb55cd2e34eb3a58f97102738cee403457edccbfded6c697451f4080b0",
+    "model.py": "773a88bd2856e4e0efb3056cbe5f550e686fee85a6c503333650017336343762",
     "../demos/low-latency-llama/matvec_pipeline.cuh": "77fa706c1708022cc3eb1c6338ff99a4e706903ffa3cfa8812e31cd27b2e31ee"
   },
   "model": "google/gemma-2b",
@@ -163,56 +165,56 @@
       "iteration": 0,
       "warmup": true,
       "decode_tokens": 127,
-      "wall_ms": 327.44189794175327,
-      "gpu_ms": 327.34564208984375
+      "wall_ms": 231.88590188510716,
+      "gpu_ms": 231.85784912109375
     },
     {
       "iteration": 1,
       "warmup": true,
       "decode_tokens": 127,
-      "wall_ms": 327.3020109627396,
-      "gpu_ms": 327.2660827636719
+      "wall_ms": 231.77118180319667,
+      "gpu_ms": 231.75421142578125
     },
     {
       "iteration": 2,
       "warmup": false,
       "decode_tokens": 127,
-      "wall_ms": 327.16477615758777,
-      "gpu_ms": 327.1414489746094
+      "wall_ms": 231.7391219548881,
+      "gpu_ms": 231.7235565185547
     },
     {
       "iteration": 3,
       "warmup": false,
       "decode_tokens": 127,
-      "wall_ms": 327.1824230905622,
-      "gpu_ms": 327.1584777832031
+      "wall_ms": 231.73807794228196,
+      "gpu_ms": 231.7211456298828
     },
     {
       "iteration": 4,
       "warmup": false,
       "decode_tokens": 127,
-      "wall_ms": 327.2784349974245,
-      "gpu_ms": 327.2595520019531
+      "wall_ms": 231.72820918262005,
+      "gpu_ms": 231.7130584716797
     },
     {
       "iteration": 5,
       "warmup": false,
       "decode_tokens": 127,
-      "wall_ms": 327.10957108065486,
-      "gpu_ms": 327.09075927734375
+      "wall_ms": 231.80481395684183,
+      "gpu_ms": 231.79029846191406
     },
     {
       "iteration": 6,
       "warmup": false,
       "decode_tokens": 127,
-      "wall_ms": 327.2622919175774,
-      "gpu_ms": 327.24261474609375
+      "wall_ms": 231.76952288486063,
+      "gpu_ms": 231.72467041015625
     }
   ],
   "validation": {
-    "max_abs_error": 0.44275665283203125,
-    "mean_abs_error": 0.08094419538974762,
-    "cosine": 0.999997615814209,
+    "max_abs_error": 0.4752006530761719,
+    "mean_abs_error": 0.07242891192436218,
+    "cosine": 0.9999974966049194,
     "mk_token": 235269,
     "reference_token": 235269
   },

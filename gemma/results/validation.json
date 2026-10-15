@@ -1,7 +1,7 @@
 {
-  "max_abs_error": 0.44275665283203125,
-  "mean_abs_error": 0.08094419538974762,
-  "cosine": 0.999997615814209,
+  "max_abs_error": 0.4752006530761719,
+  "mean_abs_error": 0.07242891192436218,
+  "cosine": 0.9999974966049194,
   "mk_token": 235269,
   "reference_token": 235269
 }

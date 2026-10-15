@@ -1,5 +1,5 @@
 `torch_dtype` is deprecated! Use `dtype` instead!
-Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards: 100%|██████████| 2/2 [00:00<00:00, 167.35it/s]
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards: 100%|██████████| 2/2 [00:00<00:00, 168.82it/s]
 {'test': 'native_prefill', 'prompt': 'The solar system contains eight planets. The largest planet is', 'prompt_length': 12, 'first_token': 48453, 'next_token': 235269, 'reference_token': 235269, 'cosine': 0.9999964833259583, 'counters': {'generation': 13, 'stages': 111, 'producer_counters': 2772}}
 {'test': 'native_prefill', 'prompt': 'The capital of France is', 'prompt_length': 6, 'first_token': 476, 'next_token': 3413, 'reference_token': 3413, 'cosine': 0.9999978542327881, 'counters': {'generation': 7, 'stages': 111, 'producer_counters': 2772}}
 {'test': 'native_prefill', 'prompt': 'def fibonacci(n):', 'prompt_length': 6, 'first_token': 108, 'next_token': 141, 'reference_token': 141, 'cosine': 0.9999920129776001, 'counters': {'generation': 7, 'stages': 111, 'producer_counters': 2772}}
@@ -12,4 +12,5 @@
 {'test': 'context_boundary', 'position': 2047, 'token': 235265, 'reference_token': 235265, 'cosine': 0.999995231628418, 'counters': {'generation': 1, 'stages': 111, 'producer_counters': 2772}}
 {'test': 'context_boundary', 'position': 4095, 'token': 714, 'reference_token': 714, 'cosine': 0.9999975562095642, 'counters': {'generation': 1, 'stages': 111, 'producer_counters': 2772}}
 {'test': 'context_boundary', 'position': 8191, 'token': 1, 'reference_token': 1, 'cosine': 0.9999821782112122, 'counters': {'generation': 1, 'stages': 111, 'producer_counters': 2772}}
+{'test': 'full_native_prefill', 'prompt_length': 8192, 'token': 714, 'reference_token': 714, 'cosine': 0.9999971389770508, 'wall_ms': 20019.599988125265, 'counters': {'generation': 8192, 'stages': 111, 'producer_counters': 2772}}
 All fused validation checks passed

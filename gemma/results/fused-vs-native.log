@@ -1,0 +1,20 @@
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards: 100%|██████████| 2/2 [00:00<00:00, 165.01it/s]
+{'position': 128, 'baseline_token': 14908, 'optimized_token': 14908, 'reference_token': 14908, 'cosine': 0.9999970197677612}
+{'position': 511, 'baseline_token': 8469, 'optimized_token': 8469, 'reference_token': 8469, 'cosine': 0.999997079372406}
+{'position': 1023, 'baseline_token': 573, 'optimized_token': 573, 'reference_token': 573, 'cosine': 0.9999971389770508}
+{'iteration': 0, 'warmup': True, 'version': 'baseline', 'wall_ms': 326.2539941351861, 'ms_per_token': 2.5689290876786304}
+{'iteration': 0, 'warmup': True, 'version': 'optimized', 'wall_ms': 232.98167088069022, 'ms_per_token': 1.8345013455172459}
+{'iteration': 1, 'warmup': True, 'version': 'baseline', 'wall_ms': 325.39567491039634, 'ms_per_token': 2.562170668585798}
+{'iteration': 1, 'warmup': True, 'version': 'optimized', 'wall_ms': 232.9254241194576, 'ms_per_token': 1.8340584576335244}
+{'iteration': 2, 'warmup': False, 'version': 'baseline', 'wall_ms': 325.38091903552413, 'ms_per_token': 2.562054480594678}
+{'iteration': 2, 'warmup': False, 'version': 'optimized', 'wall_ms': 232.8894620295614, 'ms_per_token': 1.8337752915713497}
+{'iteration': 3, 'warmup': False, 'version': 'baseline', 'wall_ms': 325.2477019559592, 'ms_per_token': 2.561005527212277}
+{'iteration': 3, 'warmup': False, 'version': 'optimized', 'wall_ms': 232.9668451566249, 'ms_per_token': 1.8343846075324797}
+{'iteration': 4, 'warmup': False, 'version': 'baseline', 'wall_ms': 325.36432007327676, 'ms_per_token': 2.5619237801045416}
+{'iteration': 4, 'warmup': False, 'version': 'optimized', 'wall_ms': 232.93797695077956, 'ms_per_token': 1.8341572988250359}
+{'iteration': 5, 'warmup': False, 'version': 'baseline', 'wall_ms': 325.3674239385873, 'ms_per_token': 2.5619482199888766}
+{'iteration': 5, 'warmup': False, 'version': 'optimized', 'wall_ms': 233.01440593786538, 'ms_per_token': 1.8347591018729557}
+{'iteration': 6, 'warmup': False, 'version': 'baseline', 'wall_ms': 325.388495111838, 'ms_per_token': 2.5621141347388816}
+{'iteration': 6, 'warmup': False, 'version': 'optimized', 'wall_ms': 233.0048270523548, 'ms_per_token': 1.834683677577597}
+{'baseline': 2.5619482199888766, 'optimized': 1.8343846075324797, 'speedup': 1.396625445650178, 'baseline_revision': '08e198d', 'native_counters': {'generation': 127, 'stages': 111, 'producer_counters': 1620}}

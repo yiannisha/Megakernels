@@ -1,5 +1,5 @@
 """Independent full-model, native-prefill, context-boundary and reset checks."""
-import json
+import json,time
 from pathlib import Path
 from unittest.mock import patch
 import torch
@@ -37,5 +37,16 @@ for position in [31,32,127,128,511,1023,2047,4095,8191]:
   try:engine.step()
   except ValueError:pass
   else:raise AssertionError('KV overflow was not rejected')
+# Full-capacity native prefill exercises every position and counter generation.
+full=long[:,:8192]
+gold=model(full,use_cache=False)
+start=time.perf_counter()
+with patch.object(model,'forward',side_effect=AssertionError('Framework forward called during native prefill')):
+    result=int(engine.prefill(full))
+elapsed_ms=(time.perf_counter()-start)*1000
+cosine=torch.nn.functional.cosine_similarity(engine.logits,gold.logits[0,-1].float(),dim=0).item()
+row=dict(test='full_native_prefill',prompt_length=8192,token=result,reference_token=int(gold.logits[0,-1].argmax()),cosine=cosine,wall_ms=elapsed_ms,counters=engine.verify_counters())
+assert row['token']==row['reference_token'] and cosine>.999,row
+records.append(row);print(row,flush=True)
 (root/'fused_validation.json').write_text(json.dumps(records,indent=2));engine.close()
 print('All fused validation checks passed',flush=True)

@@ -1,36 +1,60 @@
 {
-  "backend": "upstream-vm-tma",
-  "megakernel": {
-    "median_decode_ms": 327.1824230905622,
-    "ms_per_token": 2.576239551894191,
-    "tokens_per_second": 388.16266106338827,
-    "min_ms": 327.10957108065486,
-    "max_ms": 327.2784349974245
-  },
-  "vllm": {
-    "median_decode_ms": 271.1278840433806,
-    "ms_per_token": 2.1348652286880365,
-    "tokens_per_second": 468.41364342916467,
-    "min_ms": 263.6335138231516,
-    "max_ms": 314.8677709978074
-  },
-  "vllm_speedup": 1.2067457548490765,
-  "exact_output_match": true,
-  "teacher_forced_checks": 12,
+  "backend": "fused-megakernel-native",
   "counter_verification": {
     "generation": 127,
-    "stages": 220,
-    "producer_tiles": 44514
+    "stages": 111,
+    "producer_counters": 1044
   },
-  "cooperative_comparison": {
-    "baseline": 2.102419882499444,
-    "optimized": 2.575032581670547,
-    "speedup": 0.8164634100029536,
+  "exact_output_match": true,
+  "teacher_forced_checks": 12,
+  "megakernel": {
+    "median_decode_ms": 231.7391219548881,
+    "ms_per_token": 1.8247174957077803,
+    "tokens_per_second": 548.0300388154689,
+    "min_ms": 231.72820918262005,
+    "max_ms": 231.80481395684183
+  },
+  "vllm": {
+    "median_decode_ms": 285.35821405239403,
+    "ms_per_token": 2.246915071278693,
+    "tokens_per_second": 445.0546497206553,
+    "min_ms": 264.64963308535516,
+    "max_ms": 294.02756597846746
+  },
+  "megakernel_speedup_vs_vllm": 1.2313769537279242,
+  "comparison_08e198d": {
+    "baseline": 2.5619482199888766,
+    "optimized": 1.8343846075324797,
+    "speedup": 1.396625445650178,
+    "baseline_revision": "08e198d",
+    "native_counters": {
+      "generation": 127,
+      "stages": 111,
+      "producer_counters": 1620
+    }
+  },
+  "comparison_4a404a0": {
+    "baseline": 2.0991991270392196,
+    "optimized": 1.8362445907124618,
+    "speedup": 1.1432023476919988,
     "baseline_revision": "4a404a0",
     "native_counters": {
       "generation": 127,
-      "stages": 220,
-      "producer_tiles": 44514
+      "stages": 111,
+      "producer_counters": 1620
+    }
+  },
+  "full_native_prefill": {
+    "test": "full_native_prefill",
+    "prompt_length": 8192,
+    "token": 714,
+    "reference_token": 714,
+    "cosine": 0.9999971389770508,
+    "wall_ms": 20019.599988125265,
+    "counters": {
+      "generation": 8192,
+      "stages": 111,
+      "producer_counters": 2772
     }
   }
 }

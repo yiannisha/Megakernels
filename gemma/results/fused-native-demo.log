@@ -1,0 +1,10 @@
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards: 100%|██████████| 2/2 [00:00<00:00, 166.94it/s]
+The solar system contains eight planets. The largest planet is Jupiter, which has a diameter of 88,846 kilometers. The smallest planet is Mercury, which has a diameter of 4879 kilometers. What is the ratio of the diameter of Mercury to the diameter of Jupiter?
+
+Step 1
+1 of 2
+
+The ratio of the diameter
+Native prefill: 12 tokens, 23.60 ms; generated 64 tokens
+Counter verification: {'generation': 75, 'stages': 111, 'producer_counters': 2772}

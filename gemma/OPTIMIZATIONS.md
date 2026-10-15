@@ -1,8 +1,42 @@
 # Gemma implementation and optimization history
 
-## Native VM port
+## Complete fused native implementation
 
-The current implementation is the actual upstream `megakernel::mk` VM, with
+The current tree implements every Gemma forward operation as a named fused
+native operator. It has no generic operation adapter or cooperative kernel.
+Native prefill also runs through the same VM, with no framework forward calls.
+
+| Commit | Change |
+|---|---|
+| `d7f35f6` | Fused normalization/QKV/RoPE/KV append, gated GELU, residual projections, normalized LM head, and double-buffered split MQA |
+| `672f98a` | Tensor-core probability/value attention with BF16 online softmax tiles; restores exact benchmark-token agreement |
+| `54030f2` | Native prefill API and context-boundary validation up to position 8191 |
+| Final completion commit | Entire 8192-token native prefill, standalone native demo, historical comparisons, profiling, and refreshed vLLM benchmark |
+
+Main result: **1.825 ms/token, 548 tokens/s**, versus refreshed vLLM
+**2.247 ms/token, 445 tokens/s** (1.23× throughput) for the short-context,
+batch-one decode workload. All 128 output IDs match. Paired same-process
+comparisons verify 1.40× over `08e198d` and 1.14× over `4a404a0`.
+
+The graph shrinks from 220 to 111 stages. The 512-position configuration shrinks
+producer synchronization state from 44,514 tile flags to 1,044 grouped counters.
+QKV tiles pair RoPE partners; gate/up weight tiles alternate so GELU and gating
+happen in the storer; residuals and final norm are fused. Attention uses TMA for
+both K and V, tensor cores for both matrix products, and stable split combination.
+There is no global normalized-activation, raw-QKV, gate, or up intermediate.
+
+`validate_fused.py` verifies the complete 8192-token native prefill while
+framework forward is patched to raise. It also checks native prefill on three
+short prompts, nine real-cache boundaries, and every stage/counter invariant.
+Native prefill is tokenwise (about 20 seconds for 8192 tokens), not a batched
+prefill optimization. Decode benchmark speedups exclude prefill.
+
+See README.md and `results/summary.json` for final commands and measurement
+boundaries. The earlier sections below describe historical implementations.
+
+## Earlier unfused native VM port
+
+The earlier unfused implementation used the actual upstream `megakernel::mk` VM, with
 three-stage TMA weight pipelines, native shared-memory page management, and
 acquire/release tile counters. The cooperative kernel is preserved in Git at
 `4a404a0` and removed from the active build.
@@ -13,9 +47,9 @@ acquire/release tile counters. The cooperative kernel is preserved in Git at
 | `86cead1` | Per-tile generation flags and actual producer-tile dependencies |
 | `665a3e9` | TMA for 16384-wide projections; FP32 chunk accumulation; balanced instruction streams |
 | `09e6c2e` | Acquire loads instead of atomic read-modify-write polling; release publication |
-| Current final commit | Counter-state checks, resource cleanup, native profiling, and final validation |
+| `08e198d` | Counter-state checks, resource cleanup, native profiling, and final validation |
 
-Current result: **2.576 ms/token**, versus refreshed vLLM **2.135 ms/token**.
+That version measured **2.576 ms/token**, versus refreshed vLLM **2.135 ms/token**.
 The previous cooperative prototype is faster: an alternating, same-process
 comparison measures 2.102 vs 2.575 ms/token. The port satisfies the native
 scheduler/synchronization requirement but is not a speedup. The shared pipeline's
