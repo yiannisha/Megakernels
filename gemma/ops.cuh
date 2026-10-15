@@ -1,7 +1,9 @@
 #pragma once
 #include <cuda_runtime.h>
 #include <cuda_bf16.h>
-#include <cooperative_groups.h>
+#ifndef GEMMA_CONSUMER_SYNC
+#define GEMMA_CONSUMER_SYNC() __syncthreads()
+#endif
 #include <cmath>
 using bf=__nv_bfloat16;
 struct Stage { int op, rows, cols, tasks, begin; const bf *a,*w,*b; bf *out,*cache; float *logits; };
@@ -11,9 +13,9 @@ __device__ __forceinline__ float2 unpack(unsigned bits) {
 }
 __device__ float warp_sum(float x) { for(int i=16;i;i/=2)x+=__shfl_down_sync(0xffffffff,x,i);return x; }
 __device__ float block_sum(float x,float* sm) {
- x=warp_sum(x); if(threadIdx.x%32==0)sm[threadIdx.x/32]=x;__syncthreads();
+ x=warp_sum(x); if(threadIdx.x%32==0)sm[threadIdx.x/32]=x;GEMMA_CONSUMER_SYNC();
  x=threadIdx.x<8?sm[threadIdx.x]:0; if(threadIdx.x<32)x=warp_sum(x);
- if(threadIdx.x==0)sm[0]=x;__syncthreads();return sm[0];
+ if(threadIdx.x==0)sm[0]=x;GEMMA_CONSUMER_SYNC();return sm[0];
 }
 __device__ void execute(Stage s,int tile,State state) {
  __shared__ float sm[1024]; int t=threadIdx.x, lane=t%32,warp=t/32,p=*state.pos;
@@ -51,22 +53,22 @@ __device__ void execute(Stage s,int tile,State state) {
   int h=tile;float localmax=-INFINITY;
   for(int k=warp;k<=p;k+=8){float dot=0;for(int d=lane;d<256;d+=32)dot+=float(s.a[h*256+d])*float(s.cache[k*256+d]);
    dot=warp_sum(dot);if(lane==0)sm[k]=dot*.0625f;}
-  __syncthreads();
+  GEMMA_CONSUMER_SYNC();
   for(int k=t;k<=p;k+=256)localmax=fmaxf(localmax,sm[k]);
   for(int i=16;i;i/=2)localmax=fmaxf(localmax,__shfl_down_sync(0xffffffff,localmax,i));
-  __shared__ float red[8];if(lane==0)red[warp]=localmax;__syncthreads();
+  __shared__ float red[8];if(lane==0)red[warp]=localmax;GEMMA_CONSUMER_SYNC();
   float mx=-INFINITY;for(int i=0;i<8;i++)mx=fmaxf(mx,red[i]);
-  float z=0;for(int k=t;k<=p;k+=256){sm[k]=expf(sm[k]-mx);z+=sm[k];}__syncthreads();
+  float z=0;for(int k=t;k<=p;k+=256){sm[k]=expf(sm[k]-mx);z+=sm[k];}GEMMA_CONSUMER_SYNC();
   __shared__ float tmp[8];float denom=block_sum(z,tmp);
-  for(int k=t;k<=p;k+=256)sm[k]=float(bf(sm[k]/denom));__syncthreads();
+  for(int k=t;k<=p;k+=256)sm[k]=float(bf(sm[k]/denom));GEMMA_CONSUMER_SYNC();
   float out=0;for(int k=0;k<=p;k++)out+=sm[k]*float(s.cache[s.cols*256+k*256+t]);
   s.out[h*256+t]=bf(out);
  } else if(s.op==5) {for(int i=tile*256+t;i<min(s.rows,(tile+1)*256);i+=256)s.out[i]=bf(float(s.a[i])+float(s.b[i]));
  } else if(s.op==6) {for(int i=tile*256+t;i<min(s.rows,(tile+1)*256);i+=256){float x=float(s.a[i]);float gelu=.5f*x*(1.f+erff(x*.7071067811865475f));s.out[i]=bf(float(bf(gelu))*float(s.b[i]));}
  } else if(s.op==9) { // greedy sampler
   float v=-INFINITY;int idx=0;for(int i=t;i<s.rows;i+=256)if(s.logits[i]>v){v=s.logits[i];idx=i;}
-  __shared__ float vals[256];__shared__ int ids[256];vals[t]=v;ids[t]=idx;__syncthreads();
-  for(int stride=128;stride;stride/=2){if(t<stride && (vals[t+stride]>vals[t] || (vals[t+stride]==vals[t] && ids[t+stride]<ids[t]))){vals[t]=vals[t+stride];ids[t]=ids[t+stride];}__syncthreads();}
+  float* vals=sm;int* ids=reinterpret_cast<int*>(sm+256);vals[t]=v;ids[t]=idx;GEMMA_CONSUMER_SYNC();
+  for(int stride=128;stride;stride/=2){if(t<stride && (vals[t+stride]>vals[t] || (vals[t+stride]==vals[t] && ids[t+stride]<ids[t]))){vals[t]=vals[t+stride];ids[t]=ids[t+stride];}GEMMA_CONSUMER_SYNC();}
   if(t==0){*state.token=ids[0];*state.pos=p+1;}
  }
 }
