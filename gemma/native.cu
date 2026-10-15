@@ -5,6 +5,7 @@
 #include "ops.cuh"
 #include "../demos/low-latency-llama/utils.cuh"
 #include "../demos/low-latency-llama/matvec_pipeline.cuh"
+#include <cuda/atomic>
 #include <vector>
 #include <memory>
 
@@ -24,15 +25,21 @@ struct Globals {
  Act* activations;
  __device__ Stage stage(int i)const{return raw.stages[i];}
 };
+__device__ inline int read_counter(int* address) {
+ return cuda::atomic_ref<int,cuda::thread_scope_device>(*address).load(cuda::memory_order_acquire);
+}
+__device__ inline void add_counter(int* address,int count) {
+ cuda::atomic_ref<int,cuda::thread_scope_device>(*address).fetch_add(count,cuda::memory_order_release);
+}
 __device__ inline void wait_stage(const Globals& g,int index) {
  if(index<0)return;
  int expected=g.raw.total*g.stage(index).tasks;
- while(atomicAdd(g.raw.done+index,0)<expected)__nanosleep(20);
+ while(read_counter(g.raw.done+index)<expected)__nanosleep(20);
  __threadfence();
 }
 __device__ inline void wait_tiles(const Globals& g,int index,int start,int count) {
  int* flags=g.raw.done+g.raw.count+g.stage(index).begin;
- for(int i=start;i<start+count;i++)while(atomicAdd(flags+i,0)<g.raw.total)__nanosleep(20);
+ for(int i=start;i<start+count;i++)while(read_counter(flags+i)<g.raw.total)__nanosleep(20);
  __threadfence();
 }
 __device__ inline void producer_wait(const Globals& g,int index,int tile=-1) {
@@ -55,7 +62,7 @@ __device__ inline void producer_wait(const Globals& g,int index,int tile=-1) {
  }else wait_stage(g,index-1);
 }
 __device__ inline void publish_tile(const Globals& g,int index,int tile) {
- if(g.stage(index).op==2 || g.stage(index).op==3)atomicExch(g.raw.done+g.raw.count+g.stage(index).begin+tile,g.raw.total);
+ if(g.stage(index).op==2 || g.stage(index).op==3)cuda::atomic_ref<int,cuda::thread_scope_device>(g.raw.done[g.raw.count+g.stage(index).begin+tile]).store(g.raw.total,cuda::memory_order_release);
 }
 struct GenericOp {
  static constexpr int opcode=1;
@@ -76,7 +83,7 @@ struct GenericOp {
      GEMMA_CONSUMER_SYNC();
     }
    }
-   if(threadIdx.x==0)atomicAdd(g.raw.done+index,count);
+   if(threadIdx.x==0)add_counter(g.raw.done+index,count);
    kittens::group<Cfg::NUM_CONSUMER_WARPS>::sync(5);
   }
  };
@@ -108,7 +115,7 @@ struct PipeOp {
     }
    }
    __threadfence();__syncwarp();
-   if(lane==0 && iter%inst.parts==inst.parts-1){publish_tile(g,inst.index,inst.start+iter/inst.parts);if(iter+1==inst.iters)atomicAdd(g.raw.done+inst.index,inst.tiles);}
+   if(lane==0 && iter%inst.parts==inst.parts-1){publish_tile(g,inst.index,inst.start+iter/inst.parts);if(iter+1==inst.iters)add_counter(g.raw.done+inst.index,inst.tiles);}
   }
  };
  struct controller {
