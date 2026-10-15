@@ -6,6 +6,9 @@
 using bf=__nv_bfloat16;
 struct Stage { int op, rows, cols, tasks, begin; const bf *a,*w,*b; bf *out,*cache; float *logits; };
 struct State { Stage* stages; int count,total; int *done,*next,*pos,*token; };
+__device__ __forceinline__ float2 unpack(unsigned bits) {
+ union { unsigned u; __nv_bfloat162 b; } v;v.u=bits;return __bfloat1622float2(v.b);
+}
 __device__ float warp_sum(float x) { for(int i=16;i;i/=2)x+=__shfl_down_sync(0xffffffff,x,i);return x; }
 __device__ float block_sum(float x,float* sm) {
  x=warp_sum(x); if(threadIdx.x%32==0)sm[threadIdx.x/32]=x;__syncthreads();
@@ -23,9 +26,17 @@ __device__ void execute(Stage s,int tile,State state) {
   for(int i=t;i<2048;i+=256)s.out[i]=bf(float(s.a[i])*inv*(1.f+float(s.w[i])));
  } else if(s.op==2 || s.op==8) { // GEMV, one warp per row
   int row=tile*8+warp; if(row<s.rows){float acc=0;
-   const __nv_bfloat162* w2=reinterpret_cast<const __nv_bfloat162*>(s.w+(long long)row*s.cols);
-   const __nv_bfloat162* a2=reinterpret_cast<const __nv_bfloat162*>(s.a);
-   for(int c=lane;c<s.cols/2;c+=32){float2 w=__bfloat1622float2(w2[c]),x=__bfloat1622float2(a2[c]);acc=fmaf(w.x,x.x,acc);acc=fmaf(w.y,x.y,acc);}
+   const uint4* w8=reinterpret_cast<const uint4*>(s.w+(long long)row*s.cols);
+   const uint4* a8=reinterpret_cast<const uint4*>(s.a);
+   float sums[4]={0,0,0,0};
+   for(int c=lane;c<s.cols/8;c+=32){
+    uint4 weights=w8[c], input=a8[c];
+    float2 w=unpack(weights.x),x=unpack(input.x);sums[0]=fmaf(w.x,x.x,sums[0]);sums[0]=fmaf(w.y,x.y,sums[0]);
+    w=unpack(weights.y);x=unpack(input.y);sums[1]=fmaf(w.x,x.x,sums[1]);sums[1]=fmaf(w.y,x.y,sums[1]);
+    w=unpack(weights.z);x=unpack(input.z);sums[2]=fmaf(w.x,x.x,sums[2]);sums[2]=fmaf(w.y,x.y,sums[2]);
+    w=unpack(weights.w);x=unpack(input.w);sums[3]=fmaf(w.x,x.x,sums[3]);sums[3]=fmaf(w.y,x.y,sums[3]);
+   }
+   acc=(sums[0]+sums[1])+(sums[2]+sums[3]);
    acc=warp_sum(acc);if(lane==0){if(s.op==8)s.logits[row]=acc;else s.out[row]=bf(acc);}
   }
  } else if(s.op==3) { // non-interleaved RoPE Q/K, append single KV head
