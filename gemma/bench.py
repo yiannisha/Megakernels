@@ -1,4 +1,4 @@
-import json,sys,time,statistics
+import json,sys,time,statistics,hashlib
 from pathlib import Path
 import torch
 from transformers import AutoModelForCausalLM,AutoTokenizer
@@ -66,5 +66,8 @@ for i in range(7):
  row=dict(iteration=i,warmup=i<2,decode_tokens=127,wall_ms=ms,gpu_ms=start.elapsed_time(end))
  rows.append(row);print(row,flush=True)
 output=[first]+[int(x) for x in output]
-result=dict(model='google/gemma-2b',prompt=prompt,prompt_ids=ids[0].tolist(),output_ids=output,text=tok.decode(output),runs=rows,validation=validation,blocks=mk.blocks)
+counters=mk.verify_counters()
+print('COUNTERS',counters,flush=True)
+source_hashes={name:hashlib.sha256((Path(__file__).resolve().parent/name).read_bytes()).hexdigest() for name in ['native.cu','ops.cuh','model.py','../demos/low-latency-llama/matvec_pipeline.cuh']}
+result=dict(backend='upstream-vm-tma',counter_verification=counters,source_hashes=source_hashes,model='google/gemma-2b',prompt=prompt,prompt_ids=ids[0].tolist(),output_ids=output,text=tok.decode(output),runs=rows,validation=validation,blocks=mk.blocks)
 (ROOT/'mk.json').write_text(json.dumps(result,indent=2));print(result['text'],flush=True)

@@ -1,0 +1,71 @@
+make: Entering directory '/workspace/Megakernels/gemma'
+/usr/local/cuda-12.8/bin/nvcc -O3 -std=c++20 -arch=sm_100a -DKITTENS_HOPPER -DKITTENS_BLACKWELL -DGEMMA_TIMING=1 --expt-relaxed-constexpr --expt-extended-lambda -Xptxas=-dlcm=cg -I../ThunderKittens/include -I../include -shared -Xcompiler -fPIC native.cu -lcuda -o profile_kernel.so
+make: Leaving directory '/workspace/Megakernels/gemma'
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards: 100%|██████████| 2/2 [00:00<00:00, 164.97it/s]
+{
+  "backend": "upstream-vm",
+  "workers": 148,
+  "counters": {
+    "generation": 16,
+    "stages": 220,
+    "producer_tiles": 44514
+  },
+  "note": "Controller start/end instruction lifetimes overlap across workers and stages; not additive operation times.",
+  "instruction_lifetime_cycles": {
+    "0": {
+      "count": 8,
+      "median": 11247.0,
+      "min": 10173,
+      "max": 11717
+    },
+    "1": {
+      "count": 37,
+      "median": 23690,
+      "min": 19081,
+      "max": 26748
+    },
+    "2": {
+      "count": 12600,
+      "median": 83602.0,
+      "min": 20139,
+      "max": 216566
+    },
+    "3": {
+      "count": 162,
+      "median": 33149.0,
+      "min": 21711,
+      "max": 59707
+    },
+    "4": {
+      "count": 144,
+      "median": 29398.0,
+      "min": 26957,
+      "max": 35291
+    },
+    "5": {
+      "count": 288,
+      "median": 33017.0,
+      "min": 18643,
+      "max": 56339
+    },
+    "6": {
+      "count": 1152,
+      "median": 48928.5,
+      "min": 38347,
+      "max": 62874
+    },
+    "8": {
+      "count": 148,
+      "median": 537224.5,
+      "min": 479771,
+      "max": 586898
+    },
+    "9": {
+      "count": 1,
+      "median": 539183,
+      "min": 539183,
+      "max": 539183
+    }
+  }
+}

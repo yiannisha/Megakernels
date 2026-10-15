@@ -23,7 +23,7 @@ class GemmaDecode:
         assert c.hidden_act=='gelu' and c.rms_norm_eps==1e-6 and c.rope_theta==10000
         assert max_context<=1024
         self.model=model; self.max_context=max_context
-        self.lib=C.CDLL(str(Path(__file__).with_name('kernel.so')))
+        self.lib=C.CDLL(str(Path(__file__).with_name(os.environ.get("GEMMA_LIBRARY", "kernel.so"))))
         self.lib.launch.argtypes=[State,C.c_int,C.c_void_p];self.lib.launch.restype=C.c_int
         self.pos=torch.zeros(1,device='cuda',dtype=torch.int32)
         self.token=torch.zeros_like(self.pos)
@@ -61,6 +61,7 @@ class GemmaDecode:
         for s in stages:s.begin=total;total+=s.tasks
         packed=(Stage*len(stages))(*stages)
         self.stages=torch.frombuffer(bytearray(bytes(packed)),dtype=torch.uint8).cuda()
+        self.stage_specs=stages
         self.blocks=self.lib.capacity()
         # The upstream instruction fetch indexes streams by physical SM ID.
         # One resident VM CTA per SM consumes its own packed instruction list.
@@ -85,6 +86,8 @@ class GemmaDecode:
         self.context=self.lib.create_native(self.state,ptr(self.instructions),self.blocks,length,ptr(self.timings))
         if not self.context:raise RuntimeError('Native VM context creation failed')
         self.state.next=self.context
+        self.lib.destroy_native.argtypes=[C.c_void_p]
+        self.lib.destroy_native.restype=None
 
     def load_cache(self, cache, token, position):
         assert 0 <= position < self.max_context
@@ -97,11 +100,35 @@ class GemmaDecode:
             self.kv[l,1,:position].copy_(v[0,0,:position])
         self.pos.fill_(position);self.token.fill_(token)
 
+    def verify_counters(self):
+        """Check all stage arrivals and tile generations after synchronization."""
+        actual=self.done.cpu().tolist()
+        generation=self.state.total
+        tile_count=0
+        for i,stage in enumerate(self.stage_specs):
+            assert actual[i]==generation*stage.tasks,(i,actual[i],generation*stage.tasks)
+            if stage.op in (2,3):
+                flags=actual[len(self.stage_specs)+stage.begin:len(self.stage_specs)+stage.begin+stage.tasks]
+                assert all(x==generation for x in flags),(i,generation)
+                tile_count+=len(flags)
+        return dict(generation=generation,stages=len(self.stage_specs),producer_tiles=tile_count)
+
+    def close(self):
+        if getattr(self, "context", None):
+            torch.cuda.synchronize()
+            self.lib.destroy_native(self.context)
+            self.context=None
+
+    def __del__(self):
+        try:self.close()
+        except Exception:pass
+
     def step(self):
+        if not self.context:raise RuntimeError('Gemma native VM is closed')
         if self.position >= self.max_context:
             raise ValueError('Gemma decode KV cache is full')
         self.position += 1
         self.state.total += 1
         err=self.lib.launch(self.state,self.blocks,torch.cuda.current_stream().cuda_stream)
-        if err: raise RuntimeError(f'CUDA cooperative launch failed: {err}')
+        if err: raise RuntimeError(f'CUDA native VM launch failed: {err}')
         return self.token

@@ -1,0 +1,12 @@
+Fetching 7 files:   0%|          | 0/7 [00:00<?, ?it/s]Fetching 7 files: 100%|██████████| 7/7 [00:00<00:00, 1479.32it/s]
+Loading safetensors files:   0%|          | 0/1 [00:00<?, ?it/s]Loading safetensors files: 100%|██████████| 1/1 [00:00<00:00,  1.30it/s]Loading safetensors files: 100%|██████████| 1/1 [00:00<00:00,  1.30it/s]
+Input ids shape: torch.Size([1, 9])
+  0%|          | 0/15 [00:00<?, ?it/s] 40%|████      | 6/15 [00:00<00:00, 50.50it/s] 80%|████████  | 12/15 [00:00<00:00, 51.24it/s]100%|██████████| 15/15 [00:00<00:00, 51.23it/s]
+Average time: 19.25ms (CPU: 4.59ms)
+Output ids:  tensor([[ 10699,   3250,    956,   3021,   8443,   5380,   8586,    596,    832,
+             25,   8595,   1550,    279,  12829,    733,    311,    279,  10896,
+           5380,  18433,    433,   6612,   1589,    372,   1729,      0,    320,
+            456,    433,  10380, 128009, 128006]])
+Output text:  [" Who doesn't love cookies?\nHere's one: Why did the cookie go to the doctor?\nBecause it felt crumby! (get it?)<|eot_id|><|start_header_id|>"]
+Fwd per second: 1610.30
+Tokens per second: 1610.30

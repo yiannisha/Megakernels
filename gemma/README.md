@@ -1,19 +1,33 @@
-# Gemma-2B persistent decode prototype
+# Gemma-2B on the upstream Megakernels VM
 
-A standalone **Megakernels-style** implementation for `google/gemma-2b` on
-NVIDIA B200. Each decode forward pass and greedy sample runs inside one
-cooperative persistent CUDA launch. CTAs follow static instruction streams,
-partition output tiles, and synchronize between operations. This is new CUDA
-code inspired by the scheduling approach; it does not use the original
-ThunderKittens Llama kernels, their TMA pipelines, or their instruction ABI.
-The original Llama demo is unchanged.
+This implementation runs pretrained **google/gemma-2b** on a single B200 using
+`megakernel::mk` from `include/megakernel.cuh`, not a cooperative-grid loop.
+The original controller, instruction fetch, page allocator, loader, launcher,
+consumer, storer, and instruction-ring protocol execute the model.
 
-Full pretrained model: 18 layers, hidden size 2048, MLP size 16384, 8 query
-heads and one KV head, head dimension 256, vocabulary 256000. BF16 weights
-and activations, FP32 reductions. Implemented operations include Gemma's
-scaled embeddings, offset RMSNorm, non-interleaved RoPE, MQA with KV append,
-residual projections, GELU-gated MLP, tied embedding/output weights, and
-vocabulary argmax. Prefill uses Transformers and transfers its real KV cache.
+Each SM owns a packed instruction stream. There are **no `grid.sync()` calls
+or cooperative launches** in the active implementation. Cross-SM synchronization
+uses device-scope acquire/release counters and per-tile generation flags:
+
+- RoPE waits for its query head's QKV tiles; the KV task waits for K and V.
+- Attention waits for its query-head RoPE tile and the common KV append.
+- Residual and GELU tasks wait for the particular producer tiles they read.
+- Gate and up projections independently depend on their normalized input.
+- RMSNorm, dense reductions, and sampling wait for all required vector inputs,
+  rather than requiring every worker to reach a grid-wide barrier.
+
+All 91 matrix projections use the original three-stage TMA matvec pipeline in
+`demos/low-latency-llama/matvec_pipeline.cuh`, including its weight pages, shared
+semaphores, asynchronous loader, consumer computation, and output storer.
+A backward-compatible activation-provider callback supports 16384-wide down
+projections as eight 2048-element chunks. Their FP32 partial sums combine before
+rounding to BF16. The original Llama operators keep their existing behavior.
+
+The full Gemma geometry is supported: 18 layers, hidden size 2048, MLP size
+16384, eight query heads, one KV head, head dimension 256, and vocabulary 256000.
+Gemma's embedding scale, offset RMSNorm, GELU gating, and non-interleaved RoPE
+are preserved. Transformers handles prefill and supplies the real KV cache.
+One native VM launch computes a decode forward pass and greedy sample.
 
 ## Build and run
 
@@ -21,89 +35,82 @@ vocabulary argmax. Prefill uses Transformers and transfers its real KV cache.
 cd /workspace/Megakernels/gemma
 make
 HF_HUB_ENABLE_HF_TRANSFER=0 /workspace/mirage/.venv/bin/python bench.py \
-  > results/mk.log 2>&1
+  > results/native-final-bench.log 2>&1
 PATH=/workspace/Megakernels/local/vllm-venv/bin:$PATH \
   HF_HUB_OFFLINE=1 /workspace/Megakernels/local/vllm-venv/bin/python bench_vllm.py \
-  > results/vllm.log 2>&1
+  > results/native-vllm-bench.log 2>&1
 ```
 
-Run sequentially. The model is already downloaded to the Hugging Face cache;
-new installations require authorized access to `google/gemma-2b`.
-Build: CUDA 12.8, `sm_100`, register limit 64. GEMV uses 128-bit loads
-and four independent FP32 accumulation chains. Runtime: Python 3.12,
-PyTorch 2.8.0+cu128, Transformers 4.57.1, using the existing Mirage environment.
-vLLM uses the existing Megakernels venv: vLLM 0.31.0, PyTorch 2.13.0+cu130.
-No dependencies were changed in that vLLM environment.
+Run GPU benchmarks sequentially. CUDA 12.8 builds `sm_100a`, using this checkout's
+ThunderKittens headers and native VM. Runtime: Python 3.12, PyTorch 2.8.0+cu128,
+Transformers 4.57.1 in the existing Mirage venv. vLLM uses the existing
+Megakernels venv (vLLM 0.31.0, PyTorch 2.13.0+cu130). No package changes were
+needed. Authorized Gemma weights are already cached, revision
+`9cf48e52b224239de00d483ec8eb84fb8d0f3a3a`.
 
-## Measured results
+## Current measurements
 
-2026-10-15, single NVIDIA B200, batch size 1. Identical prompt token IDs,
-greedy generation, 128 output tokens, EOS ignored for fixed work. Decode
-measurement excludes prefill and the first output token: **127 decode tokens**.
-Two warmup requests followed by five measured requests, median shown.
+2026-10-15, one B200, batch size one, BF16, greedy, identical prompt IDs,
+128 output tokens with EOS ignored. Measurement covers the remaining **127
+decode tokens after the first output token**, excluding prefill, cache transfer,
+compilation, and two warmup requests. Median of five measured requests:
 
-| Implementation | Decode time | Time/token | Decode tokens/s |
-|---|---:|---:|---:|
-| Gemma persistent prototype | 267.67 ms | 2.108 ms | 474.47 |
-| vLLM | 257.75 ms | 2.030 ms | 492.73 |
+| Implementation | Time/token | Decode tokens/s |
+|---|---:|---:|
+| Native VM, TMA, and tile counters | 2.576 ms | 388.16 |
+| vLLM, refreshed | 2.135 ms | 468.41 |
 
-The optimized implementation is **about 2× faster than its original 4.18 ms/token
-version**. A fresh vLLM run is about 4% faster than this implementation.
-Paired measurements loading baseline and optimized code into the same process
-confirm 4.17 vs 2.10 ms/token (1.99×). Historical vLLM measurements were slower;
-use the refreshed numbers above when comparing the final code.
+**vLLM is 1.21× faster.** The native port also regresses versus the prior
+optimized cooperative prototype: the same-process comparison measures 2.575
+versus 2.102 ms/token (about 22.5% slower). Using the intended VM and finer
+synchronization did not by itself improve this Gemma implementation's speed.
+This port does not yet reproduce the original Llama demo's fused operator
+boundaries or tuned Gemma-specific schedules. Norm, RoPE, residual, GELU,
+attention, and sampling still use straightforward consumer adapters.
 
-The selected launch uses 592 resident CTAs (four per SM). Stage timing identified
-matrix-vector products as about 88% of the original runtime. Wider weight loads
-and independent accumulation chains are the retained optimization. Residual/norm
-fusion, two warps per output row, and loop unrolling all regressed and were
-reverted. Their source and measurements remain in separate commits; see
-[OPTIMIZATIONS.md](OPTIMIZATIONS.md).
+Custom timing is synchronized wall time including output-token copies. vLLM
+uses its engine's last-token minus first-token timestamps; full request wall
+time is saved too. Normal vLLM compilation, FlashInfer attention, and CUDA graphs
+are enabled; prefix caching is disabled. Different software stacks and timing
+boundaries remain limitations. This is not a serving-throughput benchmark.
 
-This remains a standalone prototype with full-grid barriers, simple GEMV, and
-one-CTA-per-head attention; it lacks the original project's memory pipelines.
+## Verification and history
 
-Custom timing uses synchronized wall time around all 127 steps, including
-output token copies. vLLM decode time is its engine's `last_token_ts` minus
-`first_token_ts`; full request wall time is also saved. Normal vLLM compilation,
-FlashInfer attention, and CUDA graphs are enabled, with prefix caching disabled.
-Startup, compilation, cache transfer, and warmup are excluded. Different
-PyTorch/CUDA software stacks and timing instrumentation remain limitations.
-This is a short-context, batch-one decode comparison, not a serving benchmark.
+- All 128 benchmark output token IDs exactly match vLLM.
+- All 12 teacher-forced next-token checks match Transformers.
+- Checks at KV positions 128, 511, and 1023 match Transformers and the previous
+  cooperative implementation.
+- After 127 repeated launches, all 220 stage counts and all 44,514 producer-tile
+  generations match the expected values. Generation tags avoid per-token resets.
+- The original Llama demo rebuilds with the shared pipeline extension and
+  generates a coherent 32-token response, measuring about 1610 tokens/s.
 
-## Correctness evidence
+These are correctness smoke checks, not a comprehensive accuracy evaluation.
+The base model can generate incorrect facts; exact output agreement does not
+establish factual accuracy.
 
-- All **128 generated token IDs exactly match vLLM** for the benchmark prompt.
-- Twelve teacher-forced checks across three other prompts and four decode
-  positions each match Transformers' next-token argmax (12/12).
-- Minimum logit cosine similarity in those checks: **0.9999719**.
-- Additional checks at KV positions 128, 511, and 1023 match the original
-  implementation and Transformers' next-token argmax; minimum cosine 0.9999975.
-- Logits are not bitwise equal. These are smoke checks, not a comprehensive
-  model accuracy evaluation; exact error metrics are in `results/validation.json`.
+Reviewable commits and earlier experiments are documented in
+[OPTIMIZATIONS.md](OPTIMIZATIONS.md). The old cooperative implementation remains
+at `4a404a0`; the active working tree contains only the native kernel.
 
-The prompt is `The solar system contains eight planets. The largest planet is`.
-Both implementations begin ` Jupiter, which has a diameter of 88,846 kilometers.`
-The generated text includes incorrect facts from the base model; matching
-outputs verifies this workload, not factual accuracy. Forced fixed-length
-execution continues with EOS tokens after a natural stop.
-
-Raw artifacts in `results/`: `summary.json`, `mk.json`, `vllm.json`,
-`validation.json`, `correctness.json`, `tuning.json`,
-`same_session_comparison.json`, build and runtime logs.
-
-For a reproducible comparison against the original commit (builds its library
-in a temporary directory), run:
+Reproduce the same-process comparison against that commit:
 
 ```bash
 HF_HUB_ENABLE_HF_TRANSFER=0 /workspace/mirage/.venv/bin/python verify_optimization.py
 ```
 
-`profile_stages.py` instruments stage cycles in a separate profiling run; these
-cycle fractions include each stage's barrier and are diagnostic, not standalone
-operation microbenchmarks.
+Record the upstream VM's instruction events in a separate instrumented build:
 
-Limitations: original Gemma-2B only (not Gemma 2 2B), one sequence, greedy,
-CUDA BF16, at most 1024 KV positions (512 used here), no server or continuous
-batching. `model.py` rejects unsupported model geometry and KV overflow.
-The Cohere-style implementation was dropped at the user's request.
+```bash
+HF_HUB_ENABLE_HF_TRANSFER=0 /workspace/mirage/.venv/bin/python profile_stages.py
+```
+
+Its instruction lifetimes overlap and must not be added as operation times.
+`results/native_profile.json` contains those measurements. Other raw evidence:
+`summary.json`, `mk.json`, `vllm.json`, `native_same_session_comparison.json`,
+`correctness.json`, `validation.json`, all port benchmark logs, and Llama
+regression logs. `mk.json` records hashes of the measured source files.
+
+Limits: original Gemma-2B (not Gemma 2 2B), one sequence, greedy, BF16 on B200,
+at most 1024 KV positions, no server or continuous batching. `close()` releases
+native descriptor resources after pending GPU work completes.

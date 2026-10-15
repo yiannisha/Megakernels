@@ -9,7 +9,7 @@ baseline_dir=tempfile.TemporaryDirectory(prefix='gemma-baseline-')
 baseline_path=Path(baseline_dir.name)
 repo=Path(__file__).resolve().parents[1]
 for name in ['kernel.cu','ops.cuh','model.py']:
-    (baseline_path/name).write_bytes(subprocess.check_output(['git','show',f'ba2c15d:gemma/{name}'],cwd=repo))
+    (baseline_path/name).write_bytes(subprocess.check_output(['git','show',f'4a404a0:gemma/{name}'],cwd=repo))
 subprocess.run(['/usr/local/cuda-12.8/bin/nvcc','-O3','-maxrregcount=64','-std=c++17','-arch=sm_100','-shared','-Xcompiler','-fPIC',str(baseline_path/'kernel.cu'),'-o',str(baseline_path/'kernel.so')],check=True)
 spec=importlib.util.spec_from_file_location('gemma_baseline',baseline_path/'model.py')
 module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
@@ -42,4 +42,6 @@ for iteration in range(7):
   else:assert ids==baseline_ids,'Optimized output differs from baseline'
 summary={name:statistics.median(x['ms_per_token'] for x in runs if not x['warmup'] and x['version']==name) for name in ['baseline','optimized']}
 summary['speedup']=summary['baseline']/summary['optimized']
-(root/'same_session_comparison.json').write_text(json.dumps(dict(checks=checks,runs=runs,summary=summary),indent=2));print(summary,flush=True)
+summary['baseline_revision']='4a404a0'
+summary['native_counters']=opt.verify_counters()
+(root/'native_same_session_comparison.json').write_text(json.dumps(dict(checks=checks,runs=runs,summary=summary),indent=2));print(summary,flush=True)

@@ -22,5 +22,21 @@
   [
     "unroll_trial",
     "2c7bdcb"
+  ],
+  [
+    "native_vm",
+    "8889d2a"
+  ],
+  [
+    "native_tile_dependencies",
+    "86cead1"
+  ],
+  [
+    "native_wide_tma",
+    "665a3e9"
+  ],
+  [
+    "native_acquire_release",
+    "09e6c2e"
   ]
 ]

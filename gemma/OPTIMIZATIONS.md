@@ -1,4 +1,39 @@
-# Gemma optimization history
+# Gemma implementation and optimization history
+
+## Native VM port
+
+The current implementation is the actual upstream `megakernel::mk` VM, with
+three-stage TMA weight pipelines, native shared-memory page management, and
+acquire/release tile counters. The cooperative kernel is preserved in Git at
+`4a404a0` and removed from the active build.
+
+| Commit | Change |
+|---|---|
+| `8889d2a` | Port to upstream VM; reuse TMA pipeline for 2048-wide projections |
+| `86cead1` | Per-tile generation flags and actual producer-tile dependencies |
+| `665a3e9` | TMA for 16384-wide projections; FP32 chunk accumulation; balanced instruction streams |
+| `09e6c2e` | Acquire loads instead of atomic read-modify-write polling; release publication |
+| Current final commit | Counter-state checks, resource cleanup, native profiling, and final validation |
+
+Current result: **2.576 ms/token**, versus refreshed vLLM **2.135 ms/token**.
+The previous cooperative prototype is faster: an alternating, same-process
+comparison measures 2.102 vs 2.575 ms/token. The port satisfies the native
+scheduler/synchronization requirement but is not a speedup. The shared pipeline's
+new activation-provider overload preserves the default behavior for existing
+operators; the original Llama build and 32-token generation both pass.
+
+Fine-grained tile flags apply to QKV/RoPE, attention, residuals, and GELU.
+Completion-counter updates are batched by instruction; polling uses acquire
+loads, not RMW atomics. Stage counts and tile generations are verified after
+repeated launches. All model GEMVs use the original TMA input/output ring;
+16384-wide inputs change the register activation vector for each 2048-element
+chunk via a backward-compatible callback.
+
+See `results/native_same_session_comparison.json`, `native_profile.json`,
+`native-final-bench.log`, `native-vllm-bench.log`, and `llama-regression-run.log`.
+The old cycle percentages below describe the cooperative prototype, not this VM.
+
+## Earlier cooperative prototype history
 
 All versions below are local commits in `/workspace/Megakernels`. Changes affect
 only the new `gemma/` implementation. The original Llama kernels are preserved.
@@ -11,7 +46,7 @@ only the new `gemma/` implementation. The original Llama kernels are preserved.
 | `89946a5` | Fuse residual addition with offset RMSNorm | 2.338 | Rejected regression |
 | `fcf5809` | Revert fusion; use two warps per narrow output row | about 2.5 | Rejected regression |
 | `2c7bdcb` | Revert split rows; unroll GEMV loop four times | 2.767 | Rejected regression |
-| Final commit | Restore wider loads; add same-process and long-context verification | 2.108 | Selected implementation |
+| `4a404a0` | Restore wider loads; add same-process and long-context verification | 2.108 | Selected implementation |
 
 These are sequential reviewable commits. Each experimental commit explicitly
 replaces the previous trial; compare the retained optimization to experiments
@@ -39,14 +74,13 @@ collected to attribute each rejected regression more precisely.
 
 ## Verification and comparison
 
-`verify_optimization.py` reads the baseline source directly from `ba2c15d`, builds
-it in a temporary directory, and loads both versions with the same model. It
-alternates full requests in one process. Result: baseline **4.17 ms/token**,
+The earlier verification run built the baseline directly from `ba2c15d` in a
+temporary directory and alternated both versions with the same model. Result: baseline **4.17 ms/token**,
 optimized **2.10 ms/token**, **1.99× speedup**. All sampled output sequences match.
 Long-context checks at positions 128, 511, and 1023 match both baseline and
 Transformers. See `results/same_session_comparison.json` and `verification.log`.
 
-The final standard benchmark also matches all 128 generated vLLM token IDs and
+The cooperative version's standard benchmark also matched all 128 generated vLLM token IDs and
 passes 12 short-context teacher-forced checks. The refreshed vLLM baseline is
 **2.030 ms/token**, versus **2.108 ms/token** here: vLLM remains approximately 4%
 faster on this single prompt at batch size one. This does not establish broader

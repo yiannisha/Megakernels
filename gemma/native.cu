@@ -9,7 +9,11 @@
 #include <vector>
 #include <memory>
 
+#ifndef GEMMA_TIMING
+#define GEMMA_TIMING 0
+#endif
 struct NativeConfig : megakernel::default_config {
+ static constexpr bool TIMING_RECORD_ENABLED=GEMMA_TIMING;
  static constexpr int SCRATCH_BYTES=3072;
  static constexpr int DYNAMIC_SHARED_MEMORY=13*16384+1024;
 };

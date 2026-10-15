@@ -21,56 +21,56 @@
       "warmup": true,
       "output_tokens": 128,
       "decode_tokens": 127,
-      "decode_ms": 316.94304780103266,
-      "wall_ms": 358.82477881386876
+      "decode_ms": 320.98806998692453,
+      "wall_ms": 362.78718221001327
     },
     {
       "iteration": 1,
       "warmup": true,
       "output_tokens": 128,
       "decode_tokens": 127,
-      "decode_ms": 270.56394098326564,
-      "wall_ms": 285.3134509641677
+      "decode_ms": 269.6710310410708,
+      "wall_ms": 288.9983782079071
     },
     {
       "iteration": 2,
       "warmup": false,
       "output_tokens": 128,
       "decode_tokens": 127,
-      "decode_ms": 266.7209708597511,
-      "wall_ms": 280.73397814296186
+      "decode_ms": 271.1278840433806,
+      "wall_ms": 287.8295180853456
     },
     {
       "iteration": 3,
       "warmup": false,
       "output_tokens": 128,
       "decode_tokens": 127,
-      "decode_ms": 260.9870550222695,
-      "wall_ms": 276.0148940142244
+      "decode_ms": 263.6335138231516,
+      "wall_ms": 280.0098399166018
     },
     {
       "iteration": 4,
       "warmup": false,
       "output_tokens": 128,
       "decode_tokens": 127,
-      "decode_ms": 257.7489838004112,
-      "wall_ms": 271.86295692808926
+      "decode_ms": 266.44212915562093,
+      "wall_ms": 283.23766007088125
     },
     {
       "iteration": 5,
       "warmup": false,
       "output_tokens": 128,
       "decode_tokens": 127,
-      "decode_ms": 252.61252699419856,
-      "wall_ms": 265.5365460086614
+      "decode_ms": 271.37550502084196,
+      "wall_ms": 287.2753159608692
     },
     {
       "iteration": 6,
       "warmup": false,
       "output_tokens": 128,
       "decode_tokens": 127,
-      "decode_ms": 244.7446188889444,
-      "wall_ms": 257.96763808466494
+      "decode_ms": 314.8677709978074,
+      "wall_ms": 345.5195799469948
     }
   ],
   "output_ids": [

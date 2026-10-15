@@ -1,0 +1,11 @@
+make: Entering directory '/workspace/Megakernels/demos/low-latency-llama'
+nvcc llama.cu -DNDEBUG -Xcompiler=-fPIE --expt-extended-lambda --expt-relaxed-constexpr -Xcompiler=-Wno-psabi -Xcompiler=-fno-strict-aliasing --use_fast_math -forward-unknown-to-host-compiler -O3 -Xnvlink=--verbose -Xptxas=--verbose -Xptxas=--warn-on-spills -std=c++20 -x cu -lrt -lpthread -ldl -lcuda -lcudadevrt -lcudart_static -lcublas -lineinfo -I/workspace/Megakernels/ThunderKittens/include -I/workspace/Megakernels/include -I/usr/include/python3.12 -I/workspace/Megakernels/.venv/lib/python3.12/site-packages/pybind11/include -L/workspace/Megakernels/.venv/lib/python3.12/config-3.12-x86_64-linux-gnu -L/workspace/Megakernels/.venv/lib/x86_64-linux-gnu  -ldl  -lm  -shared -fPIC -lpython3.12 -DKITTENS_HOPPER -DKITTENS_BLACKWELL -arch=sm_100a -o mk_llama.cpython-312-x86_64-linux-gnu.so
+ptxas warning : Registers are spilled to local memory in function '_ZN10megakernel2mkINS_14default_configE9globals_tILi16ELi2048ELi8192ELi64ELi32ELi8ELi16ELi16ELi148EEJ17attention_partialIS1_S3_E19attention_reductionIS1_S3_E19rms_qkv_rope_appendIS1_S3_E8downprojIS1_S3_E6o_projIS1_S3_E15rms_upgate_siluIS1_S3_E11rms_lm_headIS1_S3_EEEEvT0_', 8 bytes spill stores, 8 bytes spill loads
+ptxas info    : 3 bytes gmem
+ptxas info    : Compiling entry function '_ZN10megakernel2mkINS_14default_configE9globals_tILi16ELi2048ELi8192ELi64ELi32ELi8ELi16ELi16ELi148EEJ17attention_partialIS1_S3_E19attention_reductionIS1_S3_E19rms_qkv_rope_appendIS1_S3_E8downprojIS1_S3_E6o_projIS1_S3_E15rms_upgate_siluIS1_S3_E11rms_lm_headIS1_S3_EEEEvT0_' for 'sm_100a'
+ptxas info    : Function properties for _ZN10megakernel2mkINS_14default_configE9globals_tILi16ELi2048ELi8192ELi64ELi32ELi8ELi16ELi16ELi148EEJ17attention_partialIS1_S3_E19attention_reductionIS1_S3_E19rms_qkv_rope_appendIS1_S3_E8downprojIS1_S3_E6o_projIS1_S3_E15rms_upgate_siluIS1_S3_E11rms_lm_headIS1_S3_EEEEvT0_
+    896 bytes stack frame, 8 bytes spill stores, 8 bytes spill loads
+ptxas info    : Used 96 registers, used 16 barriers, 896 bytes cumulative stack size, 10528 bytes smem
+ptxas info    : Compile time = 1106.285 ms
+nvlink info    : 0 bytes gmem
+make: Leaving directory '/workspace/Megakernels/demos/low-latency-llama'

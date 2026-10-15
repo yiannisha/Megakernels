@@ -1,14 +1,6 @@
 [
   {
     "blocks": 148,
-    "gpu_ms_per_token": 3.6738200187683105
-  },
-  {
-    "blocks": 296,
-    "gpu_ms_per_token": 2.3470160961151123
-  },
-  {
-    "blocks": 592,
-    "gpu_ms_per_token": 1.9655920267105103
+    "gpu_ms_per_token": 2.5077199935913086
   }
 ]

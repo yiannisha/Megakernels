@@ -1,19 +1,36 @@
 {
+  "backend": "upstream-vm-tma",
   "megakernel": {
-    "median_decode_ms": 267.6656518597156,
-    "ms_per_token": 2.1076035579505166,
-    "tokens_per_second": 474.47253361653253,
-    "min_ms": 267.64124003238976,
-    "max_ms": 267.6852671429515
+    "median_decode_ms": 327.1824230905622,
+    "ms_per_token": 2.576239551894191,
+    "tokens_per_second": 388.16266106338827,
+    "min_ms": 327.10957108065486,
+    "max_ms": 327.2784349974245
   },
   "vllm": {
-    "median_decode_ms": 257.7489838004112,
-    "ms_per_token": 2.0295195574835527,
-    "tokens_per_second": 492.7274518309755,
-    "min_ms": 244.7446188889444,
-    "max_ms": 266.7209708597511
+    "median_decode_ms": 271.1278840433806,
+    "ms_per_token": 2.1348652286880365,
+    "tokens_per_second": 468.41364342916467,
+    "min_ms": 263.6335138231516,
+    "max_ms": 314.8677709978074
   },
-  "vllm_speedup": 1.0384741305788556,
+  "vllm_speedup": 1.2067457548490765,
   "exact_output_match": true,
-  "teacher_forced_checks": 12
+  "teacher_forced_checks": 12,
+  "counter_verification": {
+    "generation": 127,
+    "stages": 220,
+    "producer_tiles": 44514
+  },
+  "cooperative_comparison": {
+    "baseline": 2.102419882499444,
+    "optimized": 2.575032581670547,
+    "speedup": 0.8164634100029536,
+    "baseline_revision": "4a404a0",
+    "native_counters": {
+      "generation": 127,
+      "stages": 220,
+      "producer_tiles": 44514
+    }
+  }
 }

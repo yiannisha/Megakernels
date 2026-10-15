@@ -1,4 +1,16 @@
 {
+  "backend": "upstream-vm-tma",
+  "counter_verification": {
+    "generation": 127,
+    "stages": 220,
+    "producer_tiles": 44514
+  },
+  "source_hashes": {
+    "native.cu": "e26b5e0f9d65d57037bc17be22d0a97553dc10b421b6289a4784917114d9ac85",
+    "ops.cuh": "1c883823edc26805e5365c68e9ac9c61cf4b2bf8b364d78096d178908b71f8fc",
+    "model.py": "517e5925c51f4d51a4cc0f068a69c0552495e5c244d00fca418ec7b5ab3cac65",
+    "../demos/low-latency-llama/matvec_pipeline.cuh": "77fa706c1708022cc3eb1c6338ff99a4e706903ffa3cfa8812e31cd27b2e31ee"
+  },
   "model": "google/gemma-2b",
   "prompt": "The solar system contains eight planets. The largest planet is",
   "prompt_ids": [
@@ -151,58 +163,58 @@
       "iteration": 0,
       "warmup": true,
       "decode_tokens": 127,
-      "wall_ms": 267.6354020368308,
-      "gpu_ms": 267.5992431640625
+      "wall_ms": 327.44189794175327,
+      "gpu_ms": 327.34564208984375
     },
     {
       "iteration": 1,
       "warmup": true,
       "decode_tokens": 127,
-      "wall_ms": 267.6746610086411,
-      "gpu_ms": 267.6432189941406
+      "wall_ms": 327.3020109627396,
+      "gpu_ms": 327.2660827636719
     },
     {
       "iteration": 2,
       "warmup": false,
       "decode_tokens": 127,
-      "wall_ms": 267.6610879134387,
-      "gpu_ms": 267.6304016113281
+      "wall_ms": 327.16477615758777,
+      "gpu_ms": 327.1414489746094
     },
     {
       "iteration": 3,
       "warmup": false,
       "decode_tokens": 127,
-      "wall_ms": 267.6852671429515,
-      "gpu_ms": 267.6614074707031
+      "wall_ms": 327.1824230905622,
+      "gpu_ms": 327.1584777832031
     },
     {
       "iteration": 4,
       "warmup": false,
       "decode_tokens": 127,
-      "wall_ms": 267.64124003238976,
-      "gpu_ms": 267.6134033203125
+      "wall_ms": 327.2784349974245,
+      "gpu_ms": 327.2595520019531
     },
     {
       "iteration": 5,
       "warmup": false,
       "decode_tokens": 127,
-      "wall_ms": 267.6656518597156,
-      "gpu_ms": 267.64013671875
+      "wall_ms": 327.10957108065486,
+      "gpu_ms": 327.09075927734375
     },
     {
       "iteration": 6,
       "warmup": false,
       "decode_tokens": 127,
-      "wall_ms": 267.6751399412751,
-      "gpu_ms": 267.64971923828125
+      "wall_ms": 327.2622919175774,
+      "gpu_ms": 327.24261474609375
     }
   ],
   "validation": {
-    "max_abs_error": 0.8364639282226562,
-    "mean_abs_error": 0.12421322613954544,
-    "cosine": 0.9999955296516418,
+    "max_abs_error": 0.44275665283203125,
+    "mean_abs_error": 0.08094419538974762,
+    "cosine": 0.999997615814209,
     "mk_token": 235269,
     "reference_token": 235269
   },
-  "blocks": 592
+  "blocks": 148
 }
