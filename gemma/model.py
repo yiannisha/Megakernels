@@ -91,6 +91,21 @@ class GemmaDecode:
             k,v=cache[layer];self.kv[layer,0,:position].copy_(k[0,0,:position]);self.kv[layer,1,:position].copy_(v[0,0,:position])
         self.pos.fill_(position);self.token.fill_(token)
 
+    def prefill(self,token_ids):
+        """Native token-by-token prefill; returns the first generated token.
+
+        This uses the fused VM for every prompt token. It favors a fully native
+        execution path over the throughput of a separate batched prefill engine.
+        """
+        if not self.context:raise RuntimeError('Native Gemma is closed')
+        tokens=torch.as_tensor(token_ids,device='cuda',dtype=torch.int32)
+        if tokens.ndim==2 and tokens.shape[0]==1:tokens=tokens[0]
+        if tokens.ndim!=1 or not 0<len(tokens)<=self.max_context:raise ValueError('Expected one nonempty prompt fitting the KV capacity')
+        self.position=0;self.state.epoch=0;self.done.zero_();self.pos.zero_()
+        for i in range(len(tokens)):
+            self.token.copy_(tokens[i:i+1]);self.step()
+        return self.token.clone()
+
     def verify_counters(self):
         actual=self.done.cpu().tolist();epoch=self.state.epoch;count=0
         for i,stage in enumerate(self.stage_specs):
