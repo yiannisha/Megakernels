@@ -20,20 +20,17 @@ __device__ void execute(Stage s,int tile,State state) {
  if(s.op==0) { // scaled embedding
   for(int i=tile*256+t;i<min((tile+1)*256,2048);i+=256)
    s.out[i]=bf(float(s.w[(*state.token)*2048+i])*float(bf(sqrtf(2048.f))));
- } else if(s.op==1 || s.op==11) { // Offset RMSNorm, optionally fused with residual add
-  float z=0;for(int i=t;i<2048;i+=256){float v=s.op==11?float(bf(float(s.a[i])+float(s.b[i]))):float(s.a[i]);z+=v*v;}
+ } else if(s.op==1) { // Gemma offset RMSNorm
+  float z=0;for(int i=t;i<2048;i+=256){float v=float(s.a[i]);z+=v*v;}
   float inv=rsqrtf(block_sum(z,sm)/2048.f+1e-6f);
-  for(int i=t;i<2048;i+=256){
-   bf value=s.op==11?bf(float(s.a[i])+float(s.b[i])):s.a[i];
-   if(s.op==11)s.cache[i]=value;
-   s.out[i]=bf(float(value)*inv*(1.f+float(s.w[i])));
-  }
+  for(int i=t;i<2048;i+=256)s.out[i]=bf(float(s.a[i])*inv*(1.f+float(s.w[i])));
  } else if(s.op==2 || s.op==8) { // GEMV, one warp per row
-  int row=tile*8+warp; if(row<s.rows){float acc=0;
+  int split=s.rows<=4096?2:1;
+  int row=tile*(8/split)+warp/split; float acc=0; if(row<s.rows){
    const uint4* w8=reinterpret_cast<const uint4*>(s.w+(long long)row*s.cols);
    const uint4* a8=reinterpret_cast<const uint4*>(s.a);
    float sums[4]={0,0,0,0};
-   for(int c=lane;c<s.cols/8;c+=32){
+   for(int c=lane+(warp%split)*32;c<s.cols/8;c+=32*split){
     uint4 weights=w8[c], input=a8[c];
     float2 w=unpack(weights.x),x=unpack(input.x);sums[0]=fmaf(w.x,x.x,sums[0]);sums[0]=fmaf(w.y,x.y,sums[0]);
     w=unpack(weights.y);x=unpack(input.y);sums[1]=fmaf(w.x,x.x,sums[1]);sums[1]=fmaf(w.y,x.y,sums[1]);
@@ -41,7 +38,12 @@ __device__ void execute(Stage s,int tile,State state) {
     w=unpack(weights.w);x=unpack(input.w);sums[3]=fmaf(w.x,x.x,sums[3]);sums[3]=fmaf(w.y,x.y,sums[3]);
    }
    acc=(sums[0]+sums[1])+(sums[2]+sums[3]);
-   acc=warp_sum(acc);if(lane==0){if(s.op==8)s.logits[row]=acc;else s.out[row]=bf(acc);}
+   acc=warp_sum(acc);
+  }
+  if(lane==0)sm[warp]=acc;__syncthreads();
+  if(lane==0 && warp%split==0 && row<s.rows){
+   float value=sm[warp]+(split==2?sm[warp+1]:0.f);
+   if(s.op==8)s.logits[row]=value;else s.out[row]=bf(value);
   }
  } else if(s.op==3) { // non-interleaved RoPE Q/K, append single KV head
   int head=tile; int d=t; float angle=p*powf(10000.f,-2.f*(d%128)/256.f);
