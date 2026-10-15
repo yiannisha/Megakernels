@@ -1,0 +1,26 @@
+[
+  [
+    "baseline",
+    "ba2c15d"
+  ],
+  [
+    "profiling",
+    "5489f01"
+  ],
+  [
+    "vector_loads",
+    "dc32922"
+  ],
+  [
+    "fusion_trial",
+    "89946a5"
+  ],
+  [
+    "split_trial",
+    "fcf5809"
+  ],
+  [
+    "unroll_trial",
+    "2c7bdcb"
+  ]
+]

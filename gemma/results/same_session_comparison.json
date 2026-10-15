@@ -1,0 +1,130 @@
+{
+  "checks": [
+    {
+      "position": 128,
+      "baseline_token": 14908,
+      "optimized_token": 14908,
+      "reference_token": 14908,
+      "cosine": 0.9999975562095642
+    },
+    {
+      "position": 511,
+      "baseline_token": 8469,
+      "optimized_token": 8469,
+      "reference_token": 8469,
+      "cosine": 0.9999977350234985
+    },
+    {
+      "position": 1023,
+      "baseline_token": 573,
+      "optimized_token": 573,
+      "reference_token": 573,
+      "cosine": 0.9999977946281433
+    }
+  ],
+  "runs": [
+    {
+      "iteration": 0,
+      "warmup": true,
+      "version": "baseline",
+      "wall_ms": 530.06038418971,
+      "ms_per_token": 4.1737038125174015
+    },
+    {
+      "iteration": 0,
+      "warmup": true,
+      "version": "optimized",
+      "wall_ms": 266.4373959414661,
+      "ms_per_token": 2.097932251507607
+    },
+    {
+      "iteration": 1,
+      "warmup": true,
+      "version": "baseline",
+      "wall_ms": 530.0836190581322,
+      "ms_per_token": 4.1738867642372615
+    },
+    {
+      "iteration": 1,
+      "warmup": true,
+      "version": "optimized",
+      "wall_ms": 266.5016970131546,
+      "ms_per_token": 2.098438559158698
+    },
+    {
+      "iteration": 2,
+      "warmup": false,
+      "version": "baseline",
+      "wall_ms": 530.0497459247708,
+      "ms_per_token": 4.173620046651739
+    },
+    {
+      "iteration": 2,
+      "warmup": false,
+      "version": "optimized",
+      "wall_ms": 266.4060560055077,
+      "ms_per_token": 2.0976854803583285
+    },
+    {
+      "iteration": 3,
+      "warmup": false,
+      "version": "baseline",
+      "wall_ms": 530.1309900823981,
+      "ms_per_token": 4.1742597644283315
+    },
+    {
+      "iteration": 3,
+      "warmup": false,
+      "version": "optimized",
+      "wall_ms": 266.5271970909089,
+      "ms_per_token": 2.098639347172511
+    },
+    {
+      "iteration": 4,
+      "warmup": false,
+      "version": "baseline",
+      "wall_ms": 530.0474809482694,
+      "ms_per_token": 4.173602212191097
+    },
+    {
+      "iteration": 4,
+      "warmup": false,
+      "version": "optimized",
+      "wall_ms": 266.44423394463956,
+      "ms_per_token": 2.09798609405228
+    },
+    {
+      "iteration": 5,
+      "warmup": false,
+      "version": "baseline",
+      "wall_ms": 530.0307420548052,
+      "ms_per_token": 4.1734704098803554
+    },
+    {
+      "iteration": 5,
+      "warmup": false,
+      "version": "optimized",
+      "wall_ms": 266.4301211480051,
+      "ms_per_token": 2.0978749696693315
+    },
+    {
+      "iteration": 6,
+      "warmup": false,
+      "version": "baseline",
+      "wall_ms": 530.0604649819434,
+      "ms_per_token": 4.17370444867672
+    },
+    {
+      "iteration": 6,
+      "warmup": false,
+      "version": "optimized",
+      "wall_ms": 266.4762889035046,
+      "ms_per_token": 2.098238495303186
+    }
+  ],
+  "summary": {
+    "baseline": 4.173620046651739,
+    "optimized": 2.09798609405228,
+    "speedup": 1.9893459058112024
+  }
+}

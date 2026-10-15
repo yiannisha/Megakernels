@@ -29,7 +29,6 @@ __device__ void execute(Stage s,int tile,State state) {
    const uint4* w8=reinterpret_cast<const uint4*>(s.w+(long long)row*s.cols);
    const uint4* a8=reinterpret_cast<const uint4*>(s.a);
    float sums[4]={0,0,0,0};
-   #pragma unroll 4
    for(int c=lane;c<s.cols/8;c+=32){
     uint4 weights=w8[c], input=a8[c];
     float2 w=unpack(weights.x),x=unpack(input.x);sums[0]=fmaf(w.x,x.x,sums[0]);sums[0]=fmaf(w.y,x.y,sums[0]);

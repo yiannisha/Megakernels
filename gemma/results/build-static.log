@@ -1,0 +1,7 @@
+ptxas info    : Overriding maximum register limit 256 for '_Z5gemma5State' with  64 of maxrregcount option
+ptxas info    : 27 bytes gmem
+ptxas info    : Compiling entry function '_Z5gemma5State' for 'sm_100'
+ptxas info    : Function properties for _Z5gemma5State
+    32 bytes stack frame, 0 bytes spill stores, 0 bytes spill loads
+ptxas info    : Used 64 registers, used 1 barriers, 32 bytes cumulative stack size, 6208 bytes smem
+ptxas info    : Compile time = 164.125 ms

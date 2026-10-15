@@ -34,7 +34,7 @@ for text in ('The capital of France is', 'def fibonacci(n):', 'Explain why the s
         mk.step();torch.cuda.synchronize()
         cosine=torch.nn.functional.cosine_similarity(mk.logits.float(),target.logits[0,-1].float(),dim=0).item()
         row=dict(prompt=text,position=position,cosine=cosine,mk_token=int(mk.logits.argmax()),reference_token=int(target.logits[0,-1].argmax()))
-        checks.append(row);assert cosine>.999,row
+        checks.append(row);assert cosine>.999 and row['mk_token']==row['reference_token'],row
         base=target
 (ROOT/'correctness.json').write_text(json.dumps(checks,indent=2))
 print('CORRECTNESS',checks,flush=True)
