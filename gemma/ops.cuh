@@ -25,12 +25,12 @@ __device__ void execute(Stage s,int tile,State state) {
   float inv=rsqrtf(block_sum(z,sm)/2048.f+1e-6f);
   for(int i=t;i<2048;i+=256)s.out[i]=bf(float(s.a[i])*inv*(1.f+float(s.w[i])));
  } else if(s.op==2 || s.op==8) { // GEMV, one warp per row
-  int split=s.rows<=4096?2:1;
-  int row=tile*(8/split)+warp/split; float acc=0; if(row<s.rows){
+  int row=tile*8+warp; if(row<s.rows){float acc=0;
    const uint4* w8=reinterpret_cast<const uint4*>(s.w+(long long)row*s.cols);
    const uint4* a8=reinterpret_cast<const uint4*>(s.a);
    float sums[4]={0,0,0,0};
-   for(int c=lane+(warp%split)*32;c<s.cols/8;c+=32*split){
+   #pragma unroll 4
+   for(int c=lane;c<s.cols/8;c+=32){
     uint4 weights=w8[c], input=a8[c];
     float2 w=unpack(weights.x),x=unpack(input.x);sums[0]=fmaf(w.x,x.x,sums[0]);sums[0]=fmaf(w.y,x.y,sums[0]);
     w=unpack(weights.y);x=unpack(input.y);sums[1]=fmaf(w.x,x.x,sums[1]);sums[1]=fmaf(w.y,x.y,sums[1]);
@@ -38,12 +38,7 @@ __device__ void execute(Stage s,int tile,State state) {
     w=unpack(weights.w);x=unpack(input.w);sums[3]=fmaf(w.x,x.x,sums[3]);sums[3]=fmaf(w.y,x.y,sums[3]);
    }
    acc=(sums[0]+sums[1])+(sums[2]+sums[3]);
-   acc=warp_sum(acc);
-  }
-  if(lane==0)sm[warp]=acc;__syncthreads();
-  if(lane==0 && warp%split==0 && row<s.rows){
-   float value=sm[warp]+(split==2?sm[warp+1]:0.f);
-   if(s.op==8)s.logits[row]=value;else s.out[row]=bf(value);
+   acc=warp_sum(acc);if(lane==0){if(s.op==8)s.logits[row]=acc;else s.out[row]=bf(acc);}
   }
  } else if(s.op==3) { // non-interleaved RoPE Q/K, append single KV head
   int head=tile; int d=t; float angle=p*powf(10000.f,-2.f*(d%128)/256.f);

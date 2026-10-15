@@ -34,7 +34,7 @@ class GemmaDecode:
         self.logits=torch.empty(c.vocab_size,device='cuda',dtype=torch.float32)
         self.weights=[];stages=[]
         def add(op,rows=2048,cols=0,a=None,w=None,b=None,out=None,cache=None,logits=None):
-            tasks=1 if op in (1,9) else (rows+(4 if rows<=4096 else 8)-1)//(4 if rows<=4096 else 8) if op in (2,8) else 9 if op==3 else 8 if op==4 else (rows+255)//256
+            tasks=1 if op in (1,9) else (rows+7)//8 if op in (2,8) else 9 if op==3 else 8 if op==4 else (rows+255)//256
             stages.append(Stage(op,rows,cols,tasks,0,ptr(a),ptr(w),ptr(b),ptr(out),ptr(cache),ptr(logits)))
         add(0,w=model.model.embed_tokens.weight,out=self.h)
         for l,layer in enumerate(model.model.layers):
