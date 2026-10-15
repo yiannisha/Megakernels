@@ -1,0 +1,19 @@
+{
+  "megakernel": {
+    "median_decode_ms": 531.0894278809428,
+    "ms_per_token": 4.181806518747582,
+    "tokens_per_second": 239.13110171809006,
+    "min_ms": 531.0673660133034,
+    "max_ms": 531.1282188631594
+  },
+  "vllm": {
+    "median_decode_ms": 284.3094358686358,
+    "ms_per_token": 2.2386569753435888,
+    "tokens_per_second": 446.6963947643297,
+    "min_ms": 272.61015004478395,
+    "max_ms": 348.4336659312248
+  },
+  "vllm_speedup": 1.8679978955265168,
+  "exact_output_match": true,
+  "teacher_forced_checks": 12
+}
