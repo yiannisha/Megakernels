@@ -34,25 +34,24 @@ class GemmaDecode:
         self.logits=torch.empty(c.vocab_size,device='cuda',dtype=torch.float32)
         self.weights=[];stages=[]
         def add(op,rows=2048,cols=0,a=None,w=None,b=None,out=None,cache=None,logits=None):
-            tasks=1 if op in (1,9) else (rows+7)//8 if op in (2,8) else 9 if op==3 else 8 if op==4 else (rows+255)//256
+            tasks=1 if op in (1,9,11) else (rows+7)//8 if op in (2,8) else 9 if op==3 else 8 if op==4 else (rows+255)//256
             stages.append(Stage(op,rows,cols,tasks,0,ptr(a),ptr(w),ptr(b),ptr(out),ptr(cache),ptr(logits)))
         add(0,w=model.model.embed_tokens.weight,out=self.h)
+        add(1,a=self.h,w=model.model.layers[0].input_layernorm.weight,out=self.norm)
         for l,layer in enumerate(model.model.layers):
             qkv=torch.cat([layer.self_attn.q_proj.weight,layer.self_attn.k_proj.weight,layer.self_attn.v_proj.weight]).contiguous()
             self.weights.append(qkv)
-            add(1,a=self.h,w=layer.input_layernorm.weight,out=self.norm)
             add(2,2560,2048,a=self.norm,w=qkv,out=self.qkv)
             add(3,cols=max_context,a=self.qkv,out=self.q,cache=self.kv[l])
             add(4,cols=max_context,a=self.q,out=self.attn,cache=self.kv[l])
             add(2,2048,2048,a=self.attn,w=layer.self_attn.o_proj.weight,out=self.proj)
-            add(5,a=self.h,b=self.proj,out=self.h)
-            add(1,a=self.h,w=layer.post_attention_layernorm.weight,out=self.norm)
+            add(11,a=self.h,b=self.proj,w=layer.post_attention_layernorm.weight,out=self.norm,cache=self.h)
             add(2,16384,2048,a=self.norm,w=layer.mlp.gate_proj.weight,out=self.gate)
             add(2,16384,2048,a=self.norm,w=layer.mlp.up_proj.weight,out=self.up)
             add(6,16384,a=self.gate,b=self.up,out=self.act)
             add(2,2048,16384,a=self.act,w=layer.mlp.down_proj.weight,out=self.proj)
-            add(5,a=self.h,b=self.proj,out=self.h)
-        add(1,a=self.h,w=model.model.norm.weight,out=self.norm)
+            next_norm=model.model.layers[l+1].input_layernorm.weight if l+1<18 else model.model.norm.weight
+            add(11,a=self.h,b=self.proj,w=next_norm,out=self.norm,cache=self.h)
         add(8,c.vocab_size,2048,a=self.norm,w=model.lm_head.weight,logits=self.logits)
         add(9,c.vocab_size,logits=self.logits)
         total=0

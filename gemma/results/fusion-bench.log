@@ -1,0 +1,25 @@
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards: 100%|██████████| 2/2 [00:00<00:00, 166.99it/s]
+VALIDATION {'max_abs_error': 0.8364639282226562, 'mean_abs_error': 0.12421322613954544, 'cosine': 0.9999955296516418, 'mk_token': 235269, 'reference_token': 235269}
+CORRECTNESS [{'prompt': 'The capital of France is', 'position': 6, 'cosine': 0.9999979734420776, 'mk_token': 3413, 'reference_token': 3413}, {'prompt': 'The capital of France is', 'position': 7, 'cosine': 0.9999979734420776, 'mk_token': 576, 'reference_token': 576}, {'prompt': 'The capital of France is', 'position': 8, 'cosine': 0.9999973773956299, 'mk_token': 82777, 'reference_token': 82777}, {'prompt': 'The capital of France is', 'position': 9, 'cosine': 0.999997615814209, 'mk_token': 235265, 'reference_token': 235265}, {'prompt': 'def fibonacci(n):', 'position': 6, 'cosine': 0.9999974966049194, 'mk_token': 141, 'reference_token': 141}, {'prompt': 'def fibonacci(n):', 'position': 7, 'cosine': 0.9999880790710449, 'mk_token': 648, 'reference_token': 648}, {'prompt': 'def fibonacci(n):', 'position': 8, 'cosine': 0.9999871253967285, 'mk_token': 552, 'reference_token': 552}, {'prompt': 'def fibonacci(n):', 'position': 9, 'cosine': 0.9999971985816956, 'mk_token': 1159, 'reference_token': 1159}, {'prompt': 'Explain why the sky is blue.', 'position': 8, 'cosine': 0.9999977350234985, 'mk_token': 235280, 'reference_token': 235280}, {'prompt': 'Explain why the sky is blue.', 'position': 9, 'cosine': 0.9999969005584717, 'mk_token': 697, 'reference_token': 697}, {'prompt': 'Explain why the sky is blue.', 'position': 10, 'cosine': 0.9999678730964661, 'mk_token': 235274, 'reference_token': 235274}, {'prompt': 'Explain why the sky is blue.', 'position': 11, 'cosine': 0.9999968409538269, 'mk_token': 235276, 'reference_token': 235276}]
+TUNING [{'blocks': 148, 'gpu_ms_per_token': 4.655767917633057}, {'blocks': 296, 'gpu_ms_per_token': 2.818592071533203}, {'blocks': 592, 'gpu_ms_per_token': 2.212035894393921}] selected 592
+{'iteration': 0, 'warmup': True, 'decode_tokens': 127, 'wall_ms': 296.94158397614956, 'gpu_ms': 296.8995056152344}
+{'iteration': 1, 'warmup': True, 'decode_tokens': 127, 'wall_ms': 296.9150950666517, 'gpu_ms': 296.8829040527344}
+{'iteration': 2, 'warmup': False, 'decode_tokens': 127, 'wall_ms': 296.8547809869051, 'gpu_ms': 296.8292236328125}
+{'iteration': 3, 'warmup': False, 'decode_tokens': 127, 'wall_ms': 296.88900616019964, 'gpu_ms': 296.85919189453125}
+{'iteration': 4, 'warmup': False, 'decode_tokens': 127, 'wall_ms': 296.9483630731702, 'gpu_ms': 296.913818359375}
+{'iteration': 5, 'warmup': False, 'decode_tokens': 127, 'wall_ms': 296.8836969230324, 'gpu_ms': 296.85711669921875}
+{'iteration': 6, 'warmup': False, 'decode_tokens': 127, 'wall_ms': 296.9054931309074, 'gpu_ms': 296.8758544921875}
+ Jupiter, which has a diameter of 88,846 kilometers. The smallest planet is Mercury, which has a diameter of 4879 kilometers. What is the ratio of the diameter of Mercury to the diameter of Jupiter?
+
+Step 1
+1 of 2
+
+The ratio of the diameter of Mercury to the diameter of Jupiter is:
+
+$\dfrac{4879}{88,846} $
+
+Result
+2 of 2
+
+$\dfrac{4879}{88,846} $<eos><eos><eos><eos><eos><eos><eos><eos><eos><eos><eos><eos><eos><eos>
