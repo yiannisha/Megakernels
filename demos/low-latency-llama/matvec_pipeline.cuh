@@ -159,9 +159,9 @@ struct matvec_pipeline {
         }
     }
 
-    template <typename rv_t>
+    template <typename rv_t, typename ActivationProvider>
     __device__ static inline void
-    consumer_loop(megakernel::state<Config> &s, const Globals &g, rv_t &activations_vec) {
+    consumer_loop(megakernel::state<Config> &s, const Globals &g, rv_t &activations_vec, ActivationProvider load_activation) {
         // Setup
         parsed_instruction inst{s};
 
@@ -192,6 +192,7 @@ struct matvec_pipeline {
                 s.record(megakernel::TEVENT_LAST_USE);
             }
 
+            load_activation(i, activations_vec);
             matvec(out_smem, weights, activations_vec);
 
             kittens::warp::sync();
@@ -209,6 +210,13 @@ struct matvec_pipeline {
             input_stage = (input_stage + 1) % INPUT_PIPELINE_STAGES;
             output_stage = (output_stage + 1) % OUTPUT_PIPELINE_STAGES;
         }
+    }
+
+    // Existing operators retain their cached activation-vector behavior.
+    template <typename rv_t>
+    __device__ static inline void consumer_loop(megakernel::state<Config> &s,
+                                               const Globals &g, rv_t &activations_vec) {
+        consumer_loop(s, g, activations_vec, [] __device__ (int, rv_t &) {});
     }
 
     template <int iter_scale = 1>

@@ -13,8 +13,8 @@ struct NativeConfig : megakernel::default_config {
  static constexpr int DYNAMIC_SHARED_MEMORY=13*16384+1024;
 };
 using Cfg=NativeConfig;
-using Weight=kittens::gl<kittens::bf16,1,1,-1,2048,kittens::st_bf<16,512>>;
-using Act=kittens::gl<kittens::bf16,1,1,1,2048>;
+using Weight=kittens::gl<kittens::bf16,1,1,-1,-1,kittens::st_bf<16,512>>;
+using Act=kittens::gl<kittens::bf16,1,1,1,-1>;
 struct Globals {
  static constexpr int hidden_dim=2048;
  megakernel::instruction_layout<Cfg> instructions;
@@ -55,8 +55,7 @@ __device__ inline void producer_wait(const Globals& g,int index,int tile=-1) {
  }else wait_stage(g,index-1);
 }
 __device__ inline void publish_tile(const Globals& g,int index,int tile) {
- atomicExch(g.raw.done+g.raw.count+g.stage(index).begin+tile,g.raw.total);
- atomicAdd(g.raw.done+index,1);
+ if(g.stage(index).op==2 || g.stage(index).op==3)atomicExch(g.raw.done+g.raw.count+g.stage(index).begin+tile,g.raw.total);
 }
 struct GenericOp {
  static constexpr int opcode=1;
@@ -77,6 +76,7 @@ struct GenericOp {
      GEMMA_CONSUMER_SYNC();
     }
    }
+   if(threadIdx.x==0)atomicAdd(g.raw.done+index,count);
    kittens::group<Cfg::NUM_CONSUMER_WARPS>::sync(5);
   }
  };
@@ -84,15 +84,15 @@ struct GenericOp {
 struct PipeOp {
  static constexpr int opcode=2;
  struct parsed_instruction {
-  int index,start,iters;
-  __device__ parsed_instruction(Cfg::instruction_t& x):index(x[1]),start(x[2]),iters(x[3]){}
+  int index,start,iters,tiles,parts;
+  __device__ parsed_instruction(Cfg::instruction_t& x):index(x[1]),start(x[2]),iters(x[3]*x[4]),tiles(x[3]),parts(x[4]){}
   __device__ parsed_instruction(megakernel::state<Cfg>& s):parsed_instruction(s.instruction()){}
  };
  struct specifics;
  using Pipeline=matvec_pipeline<Cfg,Globals,parsed_instruction,specifics>;
  struct specifics {
   static __device__ void load_iter(megakernel::state<Cfg>& s,const Globals& g,parsed_instruction& inst,int iter,int col,kittens::st_bf<16,512>& chunk,kittens::semaphore& sem){
-   kittens::tma::load_async<kittens::dim::ROW,kittens::cache_policy::EVICT_FIRST>(chunk,g.weights[inst.index],kittens::coord<>{0,(inst.start+iter)*16,col*512},sem);
+   kittens::tma::load_async<kittens::dim::ROW,kittens::cache_policy::EVICT_FIRST>(chunk,g.weights[inst.index],kittens::coord<>{0,(inst.start+iter/inst.parts)*16,(iter%inst.parts)*2048+col*512},sem);
   }
   static __device__ void store(megakernel::state<Cfg>& s,const Globals& g,parsed_instruction& inst,int iter,int output_stage){
    float* scratch=reinterpret_cast<float*>(Pipeline::get_output_start(s,output_stage));
@@ -100,11 +100,15 @@ struct PipeOp {
    if(lane<16){float value=0;
     #pragma unroll
     for(int warp=0;warp<Cfg::NUM_CONSUMER_WARPS;warp++)value+=scratch[warp*16+lane];
-    int row=(inst.start+iter)*16+lane;
-    if(op.op==8)op.logits[row]=value;else op.out[row]=bf(value);
+    float* accum=reinterpret_cast<float*>(&s.semaphores()[Pipeline::SEM_COUNT]);
+    if(iter%inst.parts==0)accum[lane]=value;else accum[lane]+=value;
+    if(iter%inst.parts==inst.parts-1){
+     int row=(inst.start+iter/inst.parts)*16+lane;
+     if(op.op==8)op.logits[row]=accum[lane];else op.out[row]=bf(accum[lane]);
+    }
    }
    __threadfence();__syncwarp();
-   if(lane==0)publish_tile(g,inst.index,inst.start+iter);
+   if(lane==0 && iter%inst.parts==inst.parts-1){publish_tile(g,inst.index,inst.start+iter/inst.parts);if(iter+1==inst.iters)atomicAdd(g.raw.done+inst.index,inst.tiles);}
   }
  };
  struct controller {
@@ -125,7 +129,11 @@ struct PipeOp {
    kittens::warp::load(shared,activation,kittens::coord<>{kittens::warpid()*Pipeline::REDUCTION_DIM_PER_WARP});
    kittens::warp::sync();RV values;kittens::warp::load(values,shared);kittens::warp::sync();
    s.warp_finish_page(Pipeline::get_activation_page(s),1);
-   Pipeline::consumer_loop(s,g,values);
+   Pipeline::consumer_loop(s,g,values,[&] __device__ (int iter,RV& value){
+    if(inst.parts>1){
+     kittens::warp::load(value,activation,{(iter%inst.parts)*Cfg::NUM_CONSUMER_WARPS+kittens::warpid()});
+    }
+   });
   }
  };
  struct storer {static __device__ void run(const Globals& g,megakernel::state<Cfg>& s){Pipeline::storer_loop(s,g);}};
@@ -136,9 +144,9 @@ extern "C" void* create_native(State raw,void* instructions,int workers,int rows
  std::vector<Stage> stages(raw.count);cudaMemcpy(stages.data(),raw.stages,sizeof(Stage)*raw.count,cudaMemcpyDeviceToHost);
  std::vector<Weight> weights;weights.reserve(raw.count);
  bf* fallback=const_cast<bf*>(stages[0].w);
- for(auto s:stages)weights.emplace_back(reinterpret_cast<kittens::bf16*>(const_cast<bf*>(s.w?s.w:fallback)),nullptr,nullptr,(s.cols==2048?s.rows:16),nullptr);
+ for(auto s:stages)weights.emplace_back(reinterpret_cast<kittens::bf16*>(const_cast<bf*>(s.w?s.w:fallback)),nullptr,nullptr,(s.cols>=2048?s.rows:16),(s.cols>=2048?s.cols:2048));
  Weight* device_weights=nullptr;cudaMalloc(&device_weights,sizeof(Weight)*weights.size());cudaMemcpy(device_weights,weights.data(),sizeof(Weight)*weights.size(),cudaMemcpyHostToDevice);
- std::vector<Act> activations;for(auto s:stages)activations.emplace_back(reinterpret_cast<kittens::bf16*>(const_cast<bf*>(s.a?s.a:fallback)),nullptr,nullptr,nullptr,nullptr);
+ std::vector<Act> activations;for(auto s:stages)activations.emplace_back(reinterpret_cast<kittens::bf16*>(const_cast<bf*>(s.a?s.a:fallback)),nullptr,nullptr,nullptr,(s.cols>=2048?s.cols:2048));
  Act* device_activations=nullptr;cudaMalloc(&device_activations,sizeof(Act)*activations.size());cudaMemcpy(device_activations,activations.data(),sizeof(Act)*activations.size(),cudaMemcpyHostToDevice);
  Globals g{megakernel::instruction_layout<Cfg>((int*)instructions,nullptr,workers,rows,nullptr),megakernel::timing_layout<Cfg>((int*)timings,nullptr,workers,rows,nullptr),raw,device_weights,device_activations};
  return new Context{g,device_weights,device_activations};

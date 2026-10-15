@@ -36,7 +36,7 @@ class GemmaDecode:
         self.logits=torch.empty(c.vocab_size,device='cuda',dtype=torch.float32)
         self.weights=[];stages=[]
         def add(op,rows=2048,cols=0,a=None,w=None,b=None,out=None,cache=None,logits=None):
-            tasks=1 if op in (1,9) else (rows+15)//16 if op in (2,8) and cols==2048 and self.use_tma else (rows+7)//8 if op in (2,8) else 9 if op==3 else 8 if op==4 else (rows+255)//256
+            tasks=1 if op in (1,9) else (rows+15)//16 if op in (2,8) and self.use_tma else (rows+7)//8 if op in (2,8) else 9 if op==3 else 8 if op==4 else (rows+255)//256
             stages.append(Stage(op,rows,cols,tasks,0,ptr(a),ptr(w),ptr(b),ptr(out),ptr(cache),ptr(logits)))
         add(0,w=model.model.embed_tokens.weight,out=self.h)
         for l,layer in enumerate(model.model.layers):
@@ -66,12 +66,13 @@ class GemmaDecode:
         # One resident VM CTA per SM consumes its own packed instruction list.
         schedules=[[] for _ in range(self.blocks)]
         for index,stage in enumerate(stages):
-            chunk=(stage.tasks+self.blocks-1)//self.blocks
+            chunk,remainder=divmod(stage.tasks,self.blocks)
             for worker,stream in enumerate(schedules):
-                start=worker*chunk;count=min(chunk,stage.tasks-start)
+                start=worker*chunk+min(worker,remainder)
+                count=chunk+(worker<remainder)
                 if count>0:
                     instruction=[0]*32
-                    instruction[:4]=[2 if stage.op in (2,8) and stage.cols==2048 and self.use_tma else 1,index,start,count]
+                    instruction[:5]=[2 if stage.op in (2,8) and self.use_tma else 1,index,start,count,max(1,stage.cols//2048)]
                     stream.append(instruction)
         length=max(map(len,schedules))
         for stream in schedules:stream.extend([[0]*32 for _ in range(length-len(stream))])
