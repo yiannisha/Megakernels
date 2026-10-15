@@ -24,11 +24,39 @@ struct Globals {
  Act* activations;
  __device__ Stage stage(int i)const{return raw.stages[i];}
 };
-__device__ inline void producer_wait(const Globals& g,int index) {
- if(index==0)return;
- int expected=g.raw.total*g.stage(index-1).tasks;
- while(atomicAdd(g.raw.done+index-1,0)<expected)__nanosleep(20);
+__device__ inline void wait_stage(const Globals& g,int index) {
+ if(index<0)return;
+ int expected=g.raw.total*g.stage(index).tasks;
+ while(atomicAdd(g.raw.done+index,0)<expected)__nanosleep(20);
  __threadfence();
+}
+__device__ inline void wait_tiles(const Globals& g,int index,int start,int count) {
+ int* flags=g.raw.done+g.raw.count+g.stage(index).begin;
+ for(int i=start;i<start+count;i++)while(atomicAdd(flags+i,0)<g.raw.total)__nanosleep(20);
+ __threadfence();
+}
+__device__ inline void producer_wait(const Globals& g,int index,int tile=-1) {
+ if(index==0)return;
+ Stage s=g.stage(index);
+ if(tile>=0 && s.op==3){ // A query head needs only its own Q rows; K/V share one head.
+  int width=g.stage(index-1).rows/g.stage(index-1).tasks;
+  wait_tiles(g,index-1,tile*256/width,(tile==8?512:256)/width);
+ }else if(tile>=0 && s.op==4){ // Q for this head plus the common K/V append.
+  wait_tiles(g,index-1,tile,1);wait_tiles(g,index-1,8,1);
+ }else if(tile>=0 && s.op==5){
+  int rows_per_tile=g.stage(index-1).rows/g.stage(index-1).tasks;
+  wait_tiles(g,index-1,tile*256/rows_per_tile,256/rows_per_tile);
+ }else if(tile>=0 && s.op==6){
+  int width=g.stage(index-1).rows/g.stage(index-1).tasks;
+  wait_tiles(g,index-1,tile*256/width,256/width);wait_tiles(g,index-2,tile*256/width,256/width);
+ }else if(s.op==2 && g.stage(index-1).op==2 && s.a==g.stage(index-1).a){
+  // Gate and up projections independently consume the same normalized input.
+  wait_stage(g,index-2);
+ }else wait_stage(g,index-1);
+}
+__device__ inline void publish_tile(const Globals& g,int index,int tile) {
+ atomicExch(g.raw.done+g.raw.count+g.stage(index).begin+tile,g.raw.total);
+ atomicAdd(g.raw.done+index,1);
 }
 struct GenericOp {
  static constexpr int opcode=1;
@@ -40,12 +68,12 @@ struct GenericOp {
   static __device__ void run(const Globals& g,megakernel::state<Cfg>& s) {
    int index=s.instruction()[1],start=s.instruction()[2],count=s.instruction()[3];
    if(kittens::warpid()<8){
-    if(threadIdx.x==0)producer_wait(g,index);
-    GEMMA_CONSUMER_SYNC();
     for(int tile=start;tile<start+count;tile++){
+     if(threadIdx.x==0)producer_wait(g,index,tile);
+     GEMMA_CONSUMER_SYNC();
      execute(g.stage(index),tile,g.raw);
      __threadfence();GEMMA_CONSUMER_SYNC();
-     if(threadIdx.x==0)atomicAdd(g.raw.done+index,1);
+     if(threadIdx.x==0)publish_tile(g,index,tile);
      GEMMA_CONSUMER_SYNC();
     }
    }
@@ -76,7 +104,7 @@ struct PipeOp {
     if(op.op==8)op.logits[row]=value;else op.out[row]=bf(value);
    }
    __threadfence();__syncwarp();
-   if(lane==0)atomicAdd(g.raw.done+inst.index,1);
+   if(lane==0)publish_tile(g,inst.index,inst.start+iter);
   }
  };
  struct controller {

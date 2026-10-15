@@ -77,7 +77,7 @@ class GemmaDecode:
         for stream in schedules:stream.extend([[0]*32 for _ in range(length-len(stream))])
         self.instructions=torch.tensor(schedules,device='cuda',dtype=torch.int32)
         self.timings=torch.zeros((self.blocks,length,128),device='cuda',dtype=torch.int32)
-        self.done=torch.zeros(len(stages),device='cuda',dtype=torch.int32)
+        self.done=torch.zeros(len(stages)+total,device='cuda',dtype=torch.int32)
         self.state=State(ptr(self.stages),len(stages),0,ptr(self.done),0,ptr(self.pos),ptr(self.token))
         self.lib.create_native.argtypes=[State,C.c_void_p,C.c_int,C.c_int,C.c_void_p]
         self.lib.create_native.restype=C.c_void_p
