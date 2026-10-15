@@ -12,7 +12,7 @@ prompt='The solar system contains eight planets. The largest planet is'
 ids=tok(prompt,return_tensors='pt').input_ids.cuda()
 pre=model(ids,use_cache=True)
 first=int(pre.logits[0,-1].argmax());pos=ids.shape[1]
-mk=GemmaDecode(model)
+mk=GemmaDecode(model,max_context=512)
 mk.load_cache(pre.past_key_values,first,pos)
 ref=model(torch.tensor([[first]],device='cuda'),past_key_values=pre.past_key_values,use_cache=True)
 mk.step();torch.cuda.synchronize()
@@ -68,6 +68,6 @@ for i in range(7):
 output=[first]+[int(x) for x in output]
 counters=mk.verify_counters()
 print('COUNTERS',counters,flush=True)
-source_hashes={name:hashlib.sha256((Path(__file__).resolve().parent/name).read_bytes()).hexdigest() for name in ['native.cu','ops.cuh','model.py','../demos/low-latency-llama/matvec_pipeline.cuh']}
-result=dict(backend='upstream-vm-tma',counter_verification=counters,source_hashes=source_hashes,model='google/gemma-2b',prompt=prompt,prompt_ids=ids[0].tolist(),output_ids=output,text=tok.decode(output),runs=rows,validation=validation,blocks=mk.blocks)
+source_hashes={name:hashlib.sha256((Path(__file__).resolve().parent/name).read_bytes()).hexdigest() for name in ['native.cu','ops.cuh','fused.cuh','attention.cuh','model.py','../demos/low-latency-llama/matvec_pipeline.cuh']}
+result=dict(backend='fused-megakernel-native',counter_verification=counters,source_hashes=source_hashes,model='google/gemma-2b',prompt=prompt,prompt_ids=ids[0].tolist(),output_ids=output,text=tok.decode(output),runs=rows,validation=validation,blocks=mk.blocks)
 (ROOT/'mk.json').write_text(json.dumps(result,indent=2));print(result['text'],flush=True)
