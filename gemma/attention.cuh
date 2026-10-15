@@ -49,7 +49,7 @@ struct AttentionOp {
   kittens::group<16>::sync(6);
   kittens::rv_fl<256> query;
   if(kittens::warpid()<2)kittens::warp::load(query,g.activations[index],{head});
-  float numerator=0;
+  kittens::rv_fl<16> numerator;kittens::warp::zero(numerator);
   for(int i=0;i<n;i++){
    int ring=i%2;kittens::wait(ready(s,ring),(i%4)>=2);
    if(kittens::warpid()<2){
@@ -66,15 +66,21 @@ struct AttentionOp {
     state[0]=maximum;state[1]=state[1]*alpha+sum;state[2]=alpha;
    }
    kittens::group<16>::sync(6);
-   if(threadIdx.x<256){
-    numerator*=state[2];
-    #pragma unroll 4
-    for(int j=0;j<32;j++)numerator+=scores[j]*float(values(s,ring)[{j,(int)threadIdx.x}]);
-   }
+   typename kittens::rt_bf<16,32>::row_vec probabilities;
+   kittens::warp::load(probabilities,*reinterpret_cast<kittens::sv_fl<32>*>(scores));
+   kittens::rt_bf<16,32> p_tile;kittens::warp::broadcast_col(p_tile,probabilities);
+   auto value_view=values(s,ring).template subtile<32,16>({0,kittens::warpid()});
+   kittens::rt_bf<32,16,kittens::ducks::rt_layout::col> v_tile;kittens::warp::load(v_tile,value_view);
+   kittens::rt_fl<16,16> product;kittens::warp::zero(product);
+   kittens::warp::mma_AB(product,p_tile,v_tile,product);
+   typename kittens::rt_fl<16,16>::row_vec product_row;
+   kittens::warp::col_max(product_row,product);
+   kittens::rv_fl<16> contribution;kittens::warp::copy(contribution,product_row);
+   kittens::warp::mul(numerator,numerator,state[2]);kittens::warp::add(numerator,numerator,contribution);
    kittens::group<16>::sync(6);kittens::warp::arrive(finished(s,ring));
    if(i>=n-2)for(int p=0;p<2;p++)s.warp_finish_page(s.pid(ring*2+p),1);
   }
-  if(threadIdx.x<256)output[threadIdx.x]=numerator;
+  if(kittens::laneid()<16)output[kittens::warpid()*16+kittens::laneid()]=numerator[0][0];
   kittens::group<16>::sync(6);kittens::warp::arrive(output_ready(s));
  }};
  struct storer {static __device__ void run(const Globals& g,megakernel::state<Cfg>& s){
